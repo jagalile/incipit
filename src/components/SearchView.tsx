@@ -4,6 +4,7 @@ import { seriesKey } from '../lib/series'
 import type { BookResult, SearchField } from '../types'
 import type { LibraryApi } from '../hooks/useLibrary'
 import { useDebounced } from '../hooks/useDebounced'
+import { plural } from '../lib/plural'
 import { BookCard } from './BookCard'
 import { SearchIcon } from './SearchIcon'
 import { StatusPicker } from './StatusPicker'
@@ -248,8 +249,10 @@ export function SearchView({ library, provider, apiKey, onOpen, onGoToSettings }
       {!loading && !error && results.length > 0 && (
         <>
           <p className="hint" style={{ marginBottom: 16 }} aria-live="polite">
-            {results.length} de {total.toLocaleString('es-ES')} resultados
-            {field === 'serie' && grouped ? ` · ${grouped.length} series detectadas` : ''}
+            {results.length} de {plural(total, 'resultado', 'resultados')}
+            {field === 'serie' && grouped
+              ? ` · ${plural(grouped.length, 'serie detectada', 'series detectadas')}`
+              : ''}
           </p>
 
           {grouped ? (

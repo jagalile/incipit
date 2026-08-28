@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { STATUSES, STATUS_META, type BookStatus, type StoredBook } from '../types'
 import type { LibraryApi } from '../hooks/useLibrary'
+import { plural } from '../lib/plural'
 import { BookCard } from './BookCard'
 import { SearchIcon } from './SearchIcon'
 import { StatusPicker } from './StatusPicker'
@@ -108,8 +109,9 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
       <div className="page-head">
         <h1>Tus estantes</h1>
         <p>
-          {library.books.length} libros guardados
-          {finishedThisYear > 0 && ` · ${finishedThisYear} terminados en ${new Date().getFullYear()}`}
+          {plural(library.books.length, 'libro guardado', 'libros guardados')}
+          {finishedThisYear > 0 &&
+            ` · ${plural(finishedThisYear, 'terminado', 'terminados')} en ${new Date().getFullYear()}`}
         </p>
       </div>
 

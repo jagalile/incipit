@@ -11,6 +11,7 @@ import {
 } from '../lib/goodreads'
 import { PROVIDERS, findBookFor } from '../lib/catalog'
 import { exportLibrary } from '../lib/storage'
+import { plural } from '../lib/plural'
 import type { Settings } from '../types'
 import type { LibraryApi } from '../hooks/useLibrary'
 import type { InstallApi } from '../hooks/useInstall'
@@ -133,8 +134,8 @@ export function SettingsView({ library, settings, onSettings, install }: Props) 
         <div className="notice notice--ok" role="status" style={{ marginBottom: 18 }}>
           <span aria-hidden="true">✓</span>
           <span>
-            Importado desde <strong>{result.origin}</strong>: {result.added} libros nuevos,{' '}
-            {result.updated} actualizados
+            Importado desde <strong>{result.origin}</strong>:{' '}
+            {plural(result.added, 'libro nuevo', 'libros nuevos')}, {result.updated} actualizados
             {result.skipped > 0 && ` · ${result.skipped} conservaron tu estado local`}.
           </span>
         </div>
@@ -413,7 +414,7 @@ export function SettingsView({ library, settings, onSettings, install }: Props) 
               <p className="label">Completar fichas</p>
               <p className="hint" style={{ margin: '0 0 10px' }}>
                 {pendingEnrich.length
-                  ? `${pendingEnrich.length} libros importados aún no tienen portada ni ficha.`
+                  ? `${plural(pendingEnrich.length, 'libro importado aún no tiene', 'libros importados aún no tienen')} portada ni ficha.`
                   : `Todos tus libros están enlazados con ${provider.label}.`}
               </p>
               <button

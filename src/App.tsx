@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PROVIDERS, refKey } from './lib/catalog'
+import { plural } from './lib/plural'
 import { useInstall } from './hooks/useInstall'
 import { useLibrary } from './hooks/useLibrary'
 import { loadSettings, saveSettings } from './lib/storage'
@@ -151,7 +152,7 @@ export default function App() {
               {PROVIDERS.find((p) => p.id === settings.provider)?.label}
             </a>
           </span>
-          <span>{library.books.length} libros en la estantería</span>
+          <span>{plural(library.books.length, 'libro', 'libros')} en la estantería</span>
         </div>
       </footer>
 
