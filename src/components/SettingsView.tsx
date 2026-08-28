@@ -9,10 +9,11 @@ import {
   type GoodreadsEntry,
   type MergeResult,
 } from '../lib/goodreads'
-import { findVolumeFor } from '../lib/googleBooks'
+import { PROVIDERS, findBookFor } from '../lib/catalog'
 import { exportLibrary } from '../lib/storage'
 import type { Settings } from '../types'
 import type { LibraryApi } from '../hooks/useLibrary'
+import type { InstallApi } from '../hooks/useInstall'
 
 type Strategy = 'merge' | 'replace'
 
@@ -20,9 +21,10 @@ interface Props {
   library: LibraryApi
   settings: Settings
   onSettings: (patch: Partial<Settings>) => void
+  install: InstallApi
 }
 
-export function GoodreadsView({ library, settings, onSettings }: Props) {
+export function SettingsView({ library, settings, onSettings, install }: Props) {
   const [strategy, setStrategy] = useState<Strategy>('merge')
   const [busy, setBusy] = useState<null | 'csv' | 'rss' | 'enrich'>(null)
   const [step, setStep] = useState('')
@@ -32,7 +34,9 @@ export function GoodreadsView({ library, settings, onSettings }: Props) {
   const [over, setOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const pendingEnrich = library.books.filter((b) => !b.volumeId)
+  const pendingEnrich = library.books.filter((b) => !b.ref)
+  const provider = PROVIDERS.find((p) => p.id === settings.provider)!
+  const needsKey = provider.needsKey && !settings.googleApiKey.trim()
 
   const apply = (entries: GoodreadsEntry[], origin: string) => {
     const merged = mergeEntries(library.books, entries, strategy)
@@ -77,7 +81,7 @@ export function GoodreadsView({ library, settings, onSettings }: Props) {
     }
   }
 
-  /** Resuelve portada y volumeId de los libros importados, uno a uno para no saturar la API. */
+  /** Resuelve portada y ficha de los libros importados, uno a uno para no saturar la API. */
   const handleEnrich = async () => {
     setBusy('enrich')
     setError(null)
@@ -86,10 +90,13 @@ export function GoodreadsView({ library, settings, onSettings }: Props) {
     let matched = 0
     for (const book of pendingEnrich) {
       try {
-        const found = await findVolumeFor(book)
+        const found = await findBookFor(book, {
+          provider: settings.provider,
+          apiKey: settings.googleApiKey,
+        })
         if (found) {
           library.update(book.id, {
-            volumeId: found.volumeId,
+            ref: found.ref,
             thumbnail: book.thumbnail ?? found.thumbnail,
             pageCount: book.pageCount ?? found.pageCount,
             isbn: book.isbn ?? found.isbn,
@@ -105,17 +112,14 @@ export function GoodreadsView({ library, settings, onSettings }: Props) {
       await new Promise((r) => setTimeout(r, 220))
     }
     setBusy(null)
-    setStep(`${matched} de ${pendingEnrich.length} libros enlazados con Google Books.`)
+    setStep(`${matched} de ${pendingEnrich.length} libros enlazados con ${provider.label}.`)
   }
 
   return (
     <section>
       <div className="page-head">
-        <h1>Conectar con Goodreads</h1>
-        <p>
-          Goodreads cerró su API pública en diciembre de 2020, así que Incipit usa las dos vías que
-          siguen funcionando: la exportación oficial en CSV y los feeds RSS de tus estantes.
-        </p>
+        <h1>Ajustes</h1>
+        <p>De dónde salen las fichas, cómo traer tu historial de Goodreads y qué hacer con tus datos.</p>
       </div>
 
       {error && (
@@ -139,8 +143,118 @@ export function GoodreadsView({ library, settings, onSettings }: Props) {
       <div className="panels">
         <div className="panel">
           <div className="panel__head">
+            <span className="panel__step" aria-hidden="true">
+              ▣
+            </span>
+            <h2>Instalar la app</h2>
+          </div>
+          {install.installed ? (
+            <>
+              <p className="panel__desc">
+                Ya la estás usando instalada. Abre y cierra sin navegador, y funciona sin conexión.
+              </p>
+              <div className="notice notice--ok">
+                <span aria-hidden="true">✓</span>
+                <span>Instalada en este dispositivo.</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="panel__desc">
+                Incipit funciona como aplicación: icono propio, pantalla completa y tus estantes
+                disponibles sin conexión.
+              </p>
+              {install.canPrompt ? (
+                <button className="btn btn--primary btn--block" onClick={install.install}>
+                  Instalar Incipit
+                </button>
+              ) : install.isIos ? (
+                <ol>
+                  <li>
+                    Pulsa <strong>Compartir</strong> en la barra de Safari.
+                  </li>
+                  <li>
+                    Elige <strong>Añadir a pantalla de inicio</strong>.
+                  </li>
+                </ol>
+              ) : (
+                <p className="hint">
+                  Desde el menú del navegador, busca <strong>Instalar aplicación</strong> o{' '}
+                  <strong>Añadir a pantalla de inicio</strong>. Si ya la instalaste, el botón no
+                  vuelve a aparecer.
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="panel">
+          <div className="panel__head">
+            <span className="panel__step" aria-hidden="true">
+              ◆
+            </span>
+            <h2>Catálogo</h2>
+          </div>
+          <p className="panel__desc">De aquí salen las portadas, las sinopsis y los resultados de búsqueda.</p>
+
+          <div className="chips" style={{ marginBottom: 12 }}>
+            {PROVIDERS.map((p) => (
+              <button
+                key={p.id}
+                className="chip"
+                aria-pressed={settings.provider === p.id}
+                onClick={() => onSettings({ provider: p.id })}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <p className="hint" style={{ marginBottom: 14 }}>
+            {provider.note}
+          </p>
+
+          {settings.provider === 'google' && (
+            <>
+              <label className="label" htmlFor="gb-key">
+                Clave de API de Google Books
+              </label>
+              <input
+                id="gb-key"
+                className="input"
+                type="password"
+                placeholder="AIza…"
+                autoComplete="off"
+                value={settings.googleApiKey}
+                onChange={(e) => onSettings({ googleApiKey: e.target.value })}
+              />
+              <p className="hint">
+                Se crea gratis en{' '}
+                <a
+                  href="https://console.cloud.google.com/apis/library/books.googleapis.com"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Google Cloud
+                </a>{' '}
+                activando «Books API». Se guarda solo en este navegador; conviene restringirla por
+                referente HTTP.
+              </p>
+              {needsKey && (
+                <div className="notice notice--warn" style={{ marginTop: 12 }}>
+                  <span>
+                    <strong>Sin clave no habrá resultados:</strong> desde 2025 Google Books responde
+                    con error de cuota a cualquier petición anónima.
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="panel">
+          <div className="panel__head">
             <span className="panel__step">1</span>
-            <h2>Importar el CSV</h2>
+            <h2>Importar de Goodreads</h2>
           </div>
           <p className="panel__desc">La vía recomendada: completa, fiable y sin intermediarios.</p>
           <ol>
@@ -171,7 +285,9 @@ export function GoodreadsView({ library, settings, onSettings }: Props) {
               if (file) handleFile(file)
             }}
           >
-            <strong>{busy === 'csv' ? 'Leyendo el archivo…' : 'Arrastra tu goodreads_library_export.csv'}</strong>
+            <strong>
+              {busy === 'csv' ? 'Leyendo el archivo…' : 'Arrastra tu goodreads_library_export.csv'}
+            </strong>
             <span>o haz clic para elegirlo</span>
           </button>
           <input
@@ -269,11 +385,9 @@ export function GoodreadsView({ library, settings, onSettings }: Props) {
         <div className="panel">
           <div className="panel__head">
             <span className="panel__step">3</span>
-            <h2>Ajustes y datos</h2>
+            <h2>Tus datos</h2>
           </div>
-          <p className="panel__desc">
-            Qué hacer cuando un libro importado ya existe en tus estantes.
-          </p>
+          <p className="panel__desc">Qué hacer cuando un libro importado ya existe en tus estantes.</p>
 
           <div className="chips" style={{ marginBottom: 18 }}>
             <button
@@ -299,13 +413,13 @@ export function GoodreadsView({ library, settings, onSettings }: Props) {
               <p className="label">Completar fichas</p>
               <p className="hint" style={{ margin: '0 0 10px' }}>
                 {pendingEnrich.length
-                  ? `${pendingEnrich.length} libros importados aún no tienen portada ni ficha de Google Books.`
-                  : 'Todos tus libros están enlazados con Google Books.'}
+                  ? `${pendingEnrich.length} libros importados aún no tienen portada ni ficha.`
+                  : `Todos tus libros están enlazados con ${provider.label}.`}
               </p>
               <button
                 className="btn btn--block"
                 onClick={handleEnrich}
-                disabled={busy !== null || pendingEnrich.length === 0}
+                disabled={busy !== null || pendingEnrich.length === 0 || needsKey}
               >
                 {busy === 'enrich' ? `Buscando portadas… ${progress}%` : 'Buscar portadas y fichas'}
               </button>

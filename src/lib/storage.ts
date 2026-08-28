@@ -8,6 +8,8 @@ export const DEFAULT_SETTINGS: Settings = {
   goodreadsUserId: '',
   corsProxy: DEFAULT_PROXY,
   theme: 'auto',
+  provider: 'openlibrary',
+  googleApiKey: '',
 }
 
 /** El acceso a localStorage falla en modo privado o con cookies bloqueadas. */
@@ -34,10 +36,19 @@ export function loadLibrary(): StoredBook[] {
   try {
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter((b): b is StoredBook => Boolean(b && b.id && b.title && b.status))
+    return parsed
+      .filter((b): b is StoredBook => Boolean(b && b.id && b.title && b.status))
+      .map(migrate)
   } catch {
     return []
   }
+}
+
+/** Las primeras versiones guardaban `volumeId` porque Google Books era la única fuente. */
+function migrate(book: StoredBook & { volumeId?: string }): StoredBook {
+  if (book.ref || !book.volumeId) return book
+  const { volumeId, ...rest } = book
+  return { ...rest, ref: { provider: 'google', id: volumeId } }
 }
 
 export function saveLibrary(books: StoredBook[]): boolean {

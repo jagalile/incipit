@@ -1,13 +1,8 @@
 import type { BookResult, SearchField } from '../types'
+import { CatalogError } from './catalogCore'
 import { parseSeries } from './series'
 
 const API = 'https://www.googleapis.com/books/v1/volumes'
-
-export class ApiError extends Error {
-  constructor(message: string, readonly kind: 'network' | 'rate-limit' | 'server' = 'server') {
-    super(message)
-  }
-}
 
 interface RawVolume {
   id: string
@@ -31,18 +26,18 @@ interface RawVolume {
 function pickCover(links?: Record<string, string>): string | undefined {
   const raw = links?.thumbnail ?? links?.smallThumbnail
   if (!raw) return undefined
-  // Google sirve las portadas por http y con "curl" de página; forzamos https y quitamos el rizo.
+  // Google sirve las portadas por http y con "rizo" de página; forzamos https y lo quitamos.
   return raw.replace(/^http:/, 'https:').replace('&edge=curl', '')
 }
 
-export function normalizeVolume(raw: RawVolume): BookResult {
+function normalizeVolume(raw: RawVolume): BookResult {
   const info = raw.volumeInfo ?? {}
   const { cleanTitle, series, seriesPosition } = parseSeries(info.title ?? 'Sin título', info.subtitle)
   const ids = info.industryIdentifiers ?? []
   const isbn =
     ids.find((i) => i.type === 'ISBN_13')?.identifier ?? ids.find((i) => i.type === 'ISBN_10')?.identifier
   return {
-    volumeId: raw.id,
+    ref: { provider: 'google', id: raw.id },
     title: cleanTitle || info.title || 'Sin título',
     subtitle: info.subtitle,
     authors: info.authors ?? [],
@@ -57,7 +52,7 @@ export function normalizeVolume(raw: RawVolume): BookResult {
     categories: info.categories,
     description: info.description,
     averageRating: info.averageRating,
-    previewLink: info.previewLink,
+    link: info.previewLink,
   }
 }
 
@@ -67,21 +62,29 @@ async function request(url: string, signal?: AbortSignal): Promise<any> {
     res = await fetch(url, { signal })
   } catch (err) {
     if ((err as Error).name === 'AbortError') throw err
-    throw new ApiError('No hay conexión con Google Books. Revisa tu red e inténtalo de nuevo.', 'network')
+    throw new CatalogError(
+      'No hay conexión con Google Books. Revisa tu red e inténtalo de nuevo.',
+      'network',
+      'google',
+    )
   }
-  if (res.status === 429) {
-    throw new ApiError('Google Books ha limitado las peticiones. Espera unos segundos.', 'rate-limit')
+  if (res.status === 429 || res.status === 403) {
+    // Desde 2025 el proyecto anónimo de Google Books tiene la cuota diaria a cero:
+    // sin clave propia, toda petición vuelve con este error.
+    throw new CatalogError(
+      'Google Books ha rechazado la petición por cuota. Necesita una clave de API propia, o puedes buscar con Open Library.',
+      res.status === 403 ? 'auth' : 'quota',
+      'google',
+    )
   }
   if (!res.ok) {
-    throw new ApiError(`Google Books respondió con un error (${res.status}).`, 'server')
+    throw new CatalogError(`Google Books respondió con un error (${res.status}).`, 'server', 'google')
   }
   return res.json()
 }
 
-/** Construye la consulta según el campo elegido en el buscador. */
-export function buildQuery(term: string, field: SearchField): string {
+function buildQuery(term: string, field: SearchField): string {
   const q = term.trim()
-  if (!q) return ''
   switch (field) {
     case 'titulo':
       return `intitle:${q}`
@@ -96,24 +99,30 @@ export function buildQuery(term: string, field: SearchField): string {
   }
 }
 
-export async function searchBooks(
+function withKey(params: URLSearchParams, apiKey?: string): URLSearchParams {
+  if (apiKey?.trim()) params.set('key', apiKey.trim())
+  return params
+}
+
+export async function search(
   term: string,
   field: SearchField,
-  opts: { signal?: AbortSignal; startIndex?: number; onlySpanish?: boolean } = {},
+  opts: { apiKey?: string; onlySpanish?: boolean; startIndex?: number; signal?: AbortSignal },
 ): Promise<{ items: BookResult[]; total: number }> {
-  const q = buildQuery(term, field)
-  if (!q) return { items: [], total: 0 }
-  const params = new URLSearchParams({
-    q,
-    printType: 'books',
-    maxResults: '24',
-    startIndex: String(opts.startIndex ?? 0),
-    orderBy: 'relevance',
-  })
+  const params = withKey(
+    new URLSearchParams({
+      q: buildQuery(term, field),
+      printType: 'books',
+      maxResults: '24',
+      startIndex: String(opts.startIndex ?? 0),
+      orderBy: 'relevance',
+    }),
+    opts.apiKey,
+  )
   if (opts.onlySpanish !== false) params.set('langRestrict', 'es')
   const data = await request(`${API}?${params}`, opts.signal)
   const items: BookResult[] = (data.items ?? []).map(normalizeVolume)
-  // Google devuelve duplicados de ediciones distintas con el mismo título+autor.
+  // Google devuelve ediciones distintas del mismo libro como resultados separados.
   const seen = new Set<string>()
   const unique = items.filter((b) => {
     const key = `${b.title.toLowerCase()}|${b.authors[0]?.toLowerCase() ?? ''}`
@@ -124,26 +133,30 @@ export async function searchBooks(
   return { items: unique, total: data.totalItems ?? 0 }
 }
 
-export async function getVolume(volumeId: string, signal?: AbortSignal): Promise<BookResult> {
-  const data = await request(`${API}/${encodeURIComponent(volumeId)}`, signal)
+export async function detail(
+  id: string,
+  opts: { apiKey?: string; signal?: AbortSignal } = {},
+): Promise<BookResult> {
+  const params = withKey(new URLSearchParams(), opts.apiKey)
+  const query = params.toString()
+  const data = await request(`${API}/${encodeURIComponent(id)}${query ? `?${query}` : ''}`, opts.signal)
   return normalizeVolume(data)
 }
 
-/** Busca el volumen que corresponde a un libro importado (ISBN primero, luego título + autor). */
-export async function findVolumeFor(
-  book: { title: string; authors: string[]; isbn?: string },
-  signal?: AbortSignal,
+export async function findMatch(
+  seed: { title: string; authors: string[]; isbn?: string },
+  opts: { apiKey?: string; signal?: AbortSignal } = {},
 ): Promise<BookResult | null> {
-  if (book.isbn) {
-    const byIsbn = await request(`${API}?q=isbn:${encodeURIComponent(book.isbn)}&maxResults=1`, signal)
-    const hit = byIsbn.items?.[0]
-    if (hit) return normalizeVolume(hit)
+  if (seed.isbn) {
+    const params = withKey(new URLSearchParams({ q: `isbn:${seed.isbn}`, maxResults: '1' }), opts.apiKey)
+    const byIsbn = await request(`${API}?${params}`, opts.signal)
+    if (byIsbn.items?.[0]) return normalizeVolume(byIsbn.items[0])
   }
-  const author = book.authors[0]
-  const q = [`intitle:${book.title.replace(/[()[\]"]/g, ' ').trim()}`, author && `inauthor:${author}`]
+  const author = seed.authors[0]
+  const q = [`intitle:${seed.title.replace(/[()[\]"]/g, ' ').trim()}`, author && `inauthor:${author}`]
     .filter(Boolean)
     .join('+')
-  const data = await request(`${API}?q=${encodeURIComponent(q)}&maxResults=3&printType=books`, signal)
-  const hit = data.items?.[0]
-  return hit ? normalizeVolume(hit) : null
+  const params = withKey(new URLSearchParams({ q, maxResults: '3', printType: 'books' }), opts.apiKey)
+  const data = await request(`${API}?${params}`, opts.signal)
+  return data.items?.[0] ? normalizeVolume(data.items[0]) : null
 }

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { BookResult, BookStatus, StoredBook } from '../types'
+import { refKey, type BookRef } from '../lib/catalogCore'
 import { loadLibrary, saveLibrary } from '../lib/storage'
 
 export interface LibraryApi {
   books: StoredBook[]
   byStatus: Record<BookStatus, StoredBook[]>
-  statusOf: (volumeId: string) => BookStatus | undefined
+  statusOf: (ref?: BookRef) => BookStatus | undefined
   persistenceError: boolean
   addFromSearch: (result: BookResult, status: BookStatus) => void
   setStatus: (id: string, status: BookStatus) => void
@@ -52,26 +53,27 @@ export function useLibrary(): LibraryApi {
     return groups
   }, [books])
 
-  const volumeIndex = useMemo(() => {
+  const refIndex = useMemo(() => {
     const map = new Map<string, BookStatus>()
-    for (const b of books) if (b.volumeId) map.set(b.volumeId, b.status)
+    for (const b of books) if (b.ref) map.set(refKey(b.ref), b.status)
     return map
   }, [books])
 
-  const statusOf = useCallback((volumeId: string) => volumeIndex.get(volumeId), [volumeIndex])
+  const statusOf = useCallback((ref?: BookRef) => (ref ? refIndex.get(refKey(ref)) : undefined), [refIndex])
 
   const addFromSearch = useCallback((result: BookResult, status: BookStatus) => {
     const now = new Date().toISOString()
     setBooks((prev) => {
-      const existing = prev.find((b) => b.volumeId === result.volumeId)
+      const key = refKey(result.ref)
+      const existing = prev.find((b) => refKey(b.ref) === key)
       if (existing) {
         return prev.map((b) =>
           b.id === existing.id ? { ...b, status, updatedAt: now, ...datesFor(status, b) } : b,
         )
       }
       const book: StoredBook = {
-        id: `gb:${result.volumeId}`,
-        volumeId: result.volumeId,
+        id: key,
+        ref: result.ref,
         title: result.title,
         authors: result.authors,
         series: result.series,

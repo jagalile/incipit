@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { STATUS_META, type BookStatus } from '../types'
 
 interface Props {
@@ -25,6 +26,7 @@ export function BookCard({
   onOpen,
   footer,
 }: Props) {
+  const [brokenCover, setBrokenCover] = useState(false)
   const author = authors.length ? authors.join(', ') : 'Autor desconocido'
   return (
     <article className="card">
@@ -34,8 +36,10 @@ export function BookCard({
         onClick={onOpen}
         aria-label={`Ver ficha de ${title}`}
       >
-        {thumbnail ? (
-          <img src={thumbnail} alt="" loading="lazy" />
+        {thumbnail && !brokenCover ? (
+          // Open Library devuelve un marcador de posición vacío cuando la obra no
+          // tiene portada: si la imagen falla, se pinta la cubierta tipográfica.
+          <img src={thumbnail} alt="" loading="lazy" onError={() => setBrokenCover(true)} />
         ) : (
           <span className="card__fallback">
             <span>{title}</span>

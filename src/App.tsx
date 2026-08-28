@@ -1,27 +1,36 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { PROVIDERS, refKey } from './lib/catalog'
+import { useInstall } from './hooks/useInstall'
 import { useLibrary } from './hooks/useLibrary'
 import { loadSettings, saveSettings } from './lib/storage'
 import type { Settings } from './types'
 import { BookDetail, type DetailSeed } from './components/BookDetail'
-import { GoodreadsView } from './components/GoodreadsView'
+import { SettingsView } from './components/SettingsView'
 import { SearchView } from './components/SearchView'
 import { ShelvesView } from './components/ShelvesView'
 
-type Tab = 'estantes' | 'buscar' | 'goodreads'
+type Tab = 'estantes' | 'buscar' | 'ajustes'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'estantes', label: 'Mis estantes' },
   { id: 'buscar', label: 'Buscar' },
-  { id: 'goodreads', label: 'Goodreads' },
+  { id: 'ajustes', label: 'Ajustes' },
 ]
 
 const THEME_CYCLE = { auto: 'light', light: 'dark', dark: 'auto' } as const
 const THEME_ICON = { auto: '◐', light: '☀', dark: '☾' } as const
 const THEME_LABEL = { auto: 'automático', light: 'claro', dark: 'oscuro' } as const
 
+/** Los accesos directos del manifiesto abren la app en una vista concreta. */
+function initialTab(): Tab {
+  const vista = new URLSearchParams(window.location.search).get('vista')
+  return TABS.some((t) => t.id === vista) ? (vista as Tab) : 'estantes'
+}
+
 export default function App() {
   const library = useLibrary()
-  const [tab, setTab] = useState<Tab>('estantes')
+  const install = useInstall()
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
   const [detail, setDetail] = useState<(DetailSeed & { id?: string }) | null>(null)
 
@@ -35,6 +44,10 @@ export default function App() {
     const applyTheme = () => {
       const resolved = settings.theme === 'auto' ? (media.matches ? 'dark' : 'light') : settings.theme
       document.documentElement.dataset.theme = resolved
+      // Tiñe también la barra del sistema cuando la app corre instalada.
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute('content', resolved === 'dark' ? '#16130f' : '#faf7f2')
     }
     applyTheme()
     media.addEventListener('change', applyTheme)
@@ -48,9 +61,10 @@ export default function App() {
 
   const stored = useMemo(() => {
     if (!detail) return undefined
+    const key = refKey(detail.ref)
     return (
       library.books.find((b) => b.id === detail.id) ??
-      (detail.volumeId ? library.books.find((b) => b.volumeId === detail.volumeId) : undefined)
+      (key ? library.books.find((b) => refKey(b.ref) === key) : undefined)
     )
   }, [detail, library.books])
 
@@ -98,12 +112,25 @@ export default function App() {
               library={library}
               onOpen={setDetail}
               onGoToSearch={() => setTab('buscar')}
-              onGoToGoodreads={() => setTab('goodreads')}
+              onGoToGoodreads={() => setTab('ajustes')}
             />
           )}
-          {tab === 'buscar' && <SearchView library={library} onOpen={setDetail} />}
-          {tab === 'goodreads' && (
-            <GoodreadsView library={library} settings={settings} onSettings={updateSettings} />
+          {tab === 'buscar' && (
+            <SearchView
+              library={library}
+              provider={settings.provider}
+              apiKey={settings.googleApiKey}
+              onOpen={setDetail}
+              onGoToSettings={() => setTab('ajustes')}
+            />
+          )}
+          {tab === 'ajustes' && (
+            <SettingsView
+              library={library}
+              settings={settings}
+              onSettings={updateSettings}
+              install={install}
+            />
           )}
         </div>
       </main>
@@ -112,8 +139,16 @@ export default function App() {
         <div className="wrap footer__inner">
           <span>
             Incipit · tus datos se guardan solo en este navegador · fichas de{' '}
-            <a href="https://books.google.com" target="_blank" rel="noreferrer">
-              Google Books
+            <a
+              href={
+                settings.provider === 'google'
+                  ? 'https://books.google.com'
+                  : 'https://openlibrary.org'
+              }
+              target="_blank"
+              rel="noreferrer"
+            >
+              {PROVIDERS.find((p) => p.id === settings.provider)?.label}
             </a>
           </span>
           <span>{library.books.length} libros en la estantería</span>
@@ -122,10 +157,12 @@ export default function App() {
 
       {detail && (
         <BookDetail
-          key={detail.id ?? detail.volumeId ?? detail.title}
+          key={detail.id ?? refKey(detail.ref) ?? detail.title}
           seed={detail}
           stored={stored}
           library={library}
+          provider={settings.provider}
+          apiKey={settings.googleApiKey}
           onClose={() => setDetail(null)}
         />
       )}

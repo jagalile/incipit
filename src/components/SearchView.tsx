@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ApiError, searchBooks } from '../lib/googleBooks'
+import { CatalogError, PROVIDERS, refKey, searchBooks, type Provider } from '../lib/catalog'
 import { seriesKey } from '../lib/series'
 import type { BookResult, SearchField } from '../types'
 import type { LibraryApi } from '../hooks/useLibrary'
@@ -21,10 +21,13 @@ const SUGGESTIONS = ['Los renglones torcidos de Dios', 'Sanderson', 'Patria', 'L
 
 interface Props {
   library: LibraryApi
+  provider: Provider
+  apiKey?: string
   onOpen: (seed: DetailSeed) => void
+  onGoToSettings: () => void
 }
 
-export function SearchView({ library, onOpen }: Props) {
+export function SearchView({ library, provider, apiKey, onOpen, onGoToSettings }: Props) {
   const [term, setTerm] = useState('')
   const [field, setField] = useState<SearchField>('todo')
   const [onlySpanish, setOnlySpanish] = useState(true)
@@ -33,6 +36,7 @@ export function SearchView({ library, onOpen }: Props) {
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorKind, setErrorKind] = useState<string>('server')
   const [attempt, setAttempt] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const query = useDebounced(term.trim())
@@ -48,7 +52,7 @@ export function SearchView({ library, onOpen }: Props) {
     const controller = new AbortController()
     setLoading(true)
     setError(null)
-    searchBooks(query, field, { signal: controller.signal, onlySpanish })
+    searchBooks(query, field, { provider, apiKey, signal: controller.signal, onlySpanish })
       .then(({ items, total: t }) => {
         if (controller.signal.aborted) return
         setResults(items)
@@ -56,29 +60,35 @@ export function SearchView({ library, onOpen }: Props) {
       })
       .catch((err) => {
         if (controller.signal.aborted || err?.name === 'AbortError') return
-        setError(err instanceof ApiError ? err.message : 'No se pudo completar la búsqueda.')
+        setError(err instanceof CatalogError ? err.message : 'No se pudo completar la búsqueda.')
+        setErrorKind(err instanceof CatalogError ? err.kind : 'server')
         setResults([])
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false)
       })
     return () => controller.abort()
-  }, [query, field, onlySpanish, attempt])
+  }, [query, field, onlySpanish, provider, apiKey, attempt])
 
   const loadMore = useCallback(async () => {
     setLoadingMore(true)
     try {
-      const { items } = await searchBooks(query, field, { startIndex: results.length, onlySpanish })
+      const { items } = await searchBooks(query, field, {
+        provider,
+        apiKey,
+        startIndex: results.length,
+        onlySpanish,
+      })
       setResults((prev) => {
-        const seen = new Set(prev.map((b) => b.volumeId))
-        return [...prev, ...items.filter((b) => !seen.has(b.volumeId))]
+        const seen = new Set(prev.map((b) => refKey(b.ref)))
+        return [...prev, ...items.filter((b) => !seen.has(refKey(b.ref)))]
       })
     } catch {
       setError('No se pudieron cargar más resultados.')
     } finally {
       setLoadingMore(false)
     }
-  }, [query, field, results.length, onlySpanish])
+  }, [query, field, results.length, onlySpanish, provider, apiKey])
 
   // En modo "serie" los resultados se agrupan por saga para leerlos como una colección.
   const grouped = useMemo(() => {
@@ -104,20 +114,20 @@ export function SearchView({ library, onOpen }: Props) {
 
   const renderCard = (book: BookResult) => (
     <BookCard
-      key={book.volumeId}
+      key={refKey(book.ref)}
       title={book.title}
       authors={book.authors}
       thumbnail={book.thumbnail}
       series={book.series}
       seriesPosition={book.seriesPosition}
       year={book.year}
-      status={library.statusOf(book.volumeId)}
+      status={library.statusOf(book.ref)}
       onOpen={() => onOpen(book)}
       footer={
         <StatusPicker
           compact
-          idPrefix={book.volumeId}
-          value={library.statusOf(book.volumeId)}
+          idPrefix={refKey(book.ref)}
+          value={library.statusOf(book.ref)}
           onChange={(status) => library.addFromSearch(book, status)}
         />
       }
@@ -129,8 +139,8 @@ export function SearchView({ library, onOpen }: Props) {
       <div className="page-head">
         <h1>Buscar libros</h1>
         <p>
-          Resultados de Google Books. Elige el estante desde la propia tarjeta y el libro se guarda en
-          tu biblioteca.
+          Resultados de {PROVIDERS.find((p) => p.id === provider)?.label ?? 'el catálogo'}. Elige el
+          estante desde la propia tarjeta y el libro se guarda en tu biblioteca.
         </p>
       </div>
 
@@ -203,10 +213,15 @@ export function SearchView({ library, onOpen }: Props) {
 
       {!loading && error && (
         <ErrorState
+          title={errorKind === 'offline' ? 'Sin conexión' : 'No se pudo buscar'}
           message={error}
-          onRetry={() => setAttempt((a) => a + 1)}
+          onRetry={errorKind === 'offline' ? undefined : () => setAttempt((a) => a + 1)}
           hint={
-            onlySpanish ? (
+            errorKind === 'quota' || errorKind === 'auth' ? (
+              <button className="btn btn--primary" onClick={onGoToSettings}>
+                Cambiar de catálogo
+              </button>
+            ) : onlySpanish ? (
               <button className="btn btn--ghost" onClick={() => setOnlySpanish(false)}>
                 Buscar en todos los idiomas
               </button>

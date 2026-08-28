@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { ApiError, findVolumeFor, getVolume } from '../lib/googleBooks'
+import { CatalogError, findBookFor, getBook, refKey, type BookRef, type Provider } from '../lib/catalog'
 import { STATUS_META, type BookResult, type BookStatus, type StoredBook } from '../types'
 import type { LibraryApi } from '../hooks/useLibrary'
 import { StatusPicker } from './StatusPicker'
 import { ErrorState } from './States'
 
 export interface DetailSeed {
-  volumeId?: string
+  ref?: BookRef
   title: string
   authors: string[]
   thumbnail?: string
@@ -21,6 +21,8 @@ interface Props {
   seed: DetailSeed
   stored?: StoredBook
   library: LibraryApi
+  provider: Provider
+  apiKey?: string
   onClose: () => void
 }
 
@@ -40,6 +42,16 @@ function toParagraphs(html?: string): string[] {
     .filter(Boolean)
 }
 
+/** Copia `over` sobre `base` ignorando lo que venga vacío. */
+function overlay<T extends object>(base: T, over: Partial<T>): T {
+  const out = { ...base }
+  for (const [key, value] of Object.entries(over)) {
+    if (value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) continue
+    ;(out as Record<string, unknown>)[key] = value
+  }
+  return out
+}
+
 function formatDate(iso?: string): string | undefined {
   if (!iso) return undefined
   const d = new Date(iso)
@@ -48,11 +60,12 @@ function formatDate(iso?: string): string | undefined {
     : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export function BookDetail({ seed, stored, library, onClose }: Props) {
+export function BookDetail({ seed, stored, library, provider, apiKey, onClose }: Props) {
   const [detail, setDetail] = useState<BookResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const [brokenCover, setBrokenCover] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -61,19 +74,19 @@ export function BookDetail({ seed, stored, library, onClose }: Props) {
     setError(null)
     ;(async () => {
       try {
-        // El id de volumen es el único dato que guardamos para reconstruir la ficha.
-        const found = seed.volumeId
-          ? await getVolume(seed.volumeId, controller.signal)
-          : await findVolumeFor(seed, controller.signal)
+        // La referencia al catálogo es el único dato que guardamos para reconstruir la ficha.
+        const found = seed.ref
+          ? await getBook(seed.ref, { apiKey, signal: controller.signal })
+          : await findBookFor(seed, { provider, apiKey, signal: controller.signal })
         if (controller.signal.aborted) return
         if (!found) {
-          setError('No encontramos este libro en Google Books. Puedes seguir usándolo en tus estantes.')
+          setError('No encontramos este libro en el catálogo. Puedes seguir usándolo en tus estantes.')
         } else {
           setDetail(found)
-          // Cachea el vínculo con la API para las próximas aperturas.
-          if (stored && !stored.volumeId) {
+          // Cachea el vínculo con el catálogo para las próximas aperturas.
+          if (stored && !stored.ref) {
             library.update(stored.id, {
-              volumeId: found.volumeId,
+              ref: found.ref,
               thumbnail: stored.thumbnail ?? found.thumbnail,
               pageCount: stored.pageCount ?? found.pageCount,
               isbn: stored.isbn ?? found.isbn,
@@ -82,14 +95,14 @@ export function BookDetail({ seed, stored, library, onClose }: Props) {
         }
       } catch (err) {
         if (controller.signal.aborted) return
-        setError(err instanceof ApiError ? err.message : 'No se pudo cargar la ficha del libro.')
+        setError(err instanceof CatalogError ? err.message : 'No se pudo cargar la ficha del libro.')
       } finally {
         if (!controller.signal.aborted) setLoading(false)
       }
     })()
     return () => controller.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed.volumeId, seed.title, attempt])
+  }, [refKey(seed.ref), seed.title, attempt])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -102,7 +115,13 @@ export function BookDetail({ seed, stored, library, onClose }: Props) {
     }
   }, [onClose])
 
-  const view = { ...seed, ...(detail ?? {}) }
+  // La ficha del catálogo completa (sinopsis, categorías, portada grande), pero el
+  // título y el autor que ya conocemos mandan: Open Library devuelve el título
+  // canónico de la obra, casi siempre en inglés, y no es el que el lector eligió.
+  const view = overlay<DetailSeed & Partial<BookResult>>(
+    { ...detail } as DetailSeed & Partial<BookResult>,
+    seed,
+  )
   const cover = stored?.thumbnail ?? detail?.thumbnail ?? seed.thumbnail
   const status = stored?.status
   const paragraphs = toParagraphs(detail?.description)
@@ -113,7 +132,7 @@ export function BookDetail({ seed, stored, library, onClose }: Props) {
     } else {
       library.addFromSearch(
         {
-          volumeId: detail?.volumeId ?? seed.volumeId ?? '',
+          ref: detail?.ref ?? seed.ref ?? { provider, id: `manual-${Date.now()}` },
           title: view.title,
           authors: view.authors,
           series: view.series,
@@ -145,8 +164,12 @@ export function BookDetail({ seed, stored, library, onClose }: Props) {
           <div className="dialog__top">
             <div>
               <div className="dialog__cover">
-                {cover ? (
-                  <img src={cover} alt={`Portada de ${view.title}`} />
+                {cover && !brokenCover ? (
+                  <img
+                    src={cover}
+                    alt={`Portada de ${view.title}`}
+                    onError={() => setBrokenCover(true)}
+                  />
                 ) : (
                   <span className="card__fallback">
                     <span>{view.title}</span>
@@ -172,7 +195,7 @@ export function BookDetail({ seed, stored, library, onClose }: Props) {
                 {view.pageCount ? <span>{view.pageCount} págs.</span> : null}
                 {detail?.publisher && <span>{detail.publisher}</span>}
                 {view.isbn && <span>ISBN {view.isbn}</span>}
-                {detail?.averageRating && <span>★ {detail.averageRating} en Google Books</span>}
+                {detail?.averageRating && <span>★ {detail.averageRating}</span>}
                 {loading && <span aria-live="polite">Cargando ficha…</span>}
               </div>
 
@@ -262,9 +285,9 @@ export function BookDetail({ seed, stored, library, onClose }: Props) {
           ) : null}
 
           <div className="dialog__footer">
-            {detail?.previewLink ? (
-              <a className="btn btn--sm" href={detail.previewLink} target="_blank" rel="noreferrer">
-                Ver en Google Books ↗
+            {detail?.link ? (
+              <a className="btn btn--sm" href={detail.link} target="_blank" rel="noreferrer">
+                {detail.ref.provider === 'google' ? 'Ver en Google Books ↗' : 'Ver en Open Library ↗'}
               </a>
             ) : (
               <span />

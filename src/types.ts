@@ -1,3 +1,5 @@
+import type { BookRef, Provider } from './lib/catalogCore'
+
 export type BookStatus = 'pendiente' | 'leyendo' | 'leido' | 'cancelado'
 
 export const STATUSES: BookStatus[] = ['leyendo', 'pendiente', 'leido', 'cancelado']
@@ -38,9 +40,10 @@ export const STATUS_META: Record<
  * el resto son los mínimos para pintar los estantes sin red.
  */
 export interface StoredBook {
-  /** Clave interna estable. `gb:<volumeId>` o `gr:<goodreadsId>` si aún no hay match. */
+  /** Clave interna estable: `<proveedor>:<id>`, o `gr:<goodreadsId>` si aún no hay match. */
   id: string
-  volumeId?: string
+  /** Puntero a la ficha completa en el catálogo. Es el único dato que hace falta guardar. */
+  ref?: BookRef
   goodreadsId?: string
   title: string
   authors: string[]
@@ -61,9 +64,9 @@ export interface StoredBook {
   source: 'google' | 'goodreads' | 'manual'
 }
 
-/** Resultado normalizado de una búsqueda en Google Books. */
+/** Resultado normalizado de una búsqueda, venga del catálogo que venga. */
 export interface BookResult {
-  volumeId: string
+  ref: BookRef
   title: string
   subtitle?: string
   authors: string[]
@@ -78,7 +81,7 @@ export interface BookResult {
   categories?: string[]
   description?: string
   averageRating?: number
-  previewLink?: string
+  link?: string
 }
 
 export interface Settings {
@@ -86,6 +89,10 @@ export interface Settings {
   corsProxy: string
   theme: 'light' | 'dark' | 'auto'
   lastSyncAt?: string
+  /** Catálogo del que salen las búsquedas y las fichas. */
+  provider: Provider
+  /** Clave propia de Google Books, obligatoria desde que cerró el acceso anónimo. */
+  googleApiKey: string
 }
 
 export type SearchField = 'todo' | 'titulo' | 'autor' | 'serie'
