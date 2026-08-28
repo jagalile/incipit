@@ -491,6 +491,37 @@ main { flex: 1; padding: 30px 0 72px; }
 
 .card__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
+.card__remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.16s, background 0.16s, transform 0.16s;
+}
+
+.card:hover .card__remove,
+.card:focus-within .card__remove {
+  opacity: 1;
+}
+
+.card__remove:hover { background: var(--danger); transform: scale(1.08); }
+.card__remove:focus-visible { opacity: 1; }
+
+/* Sin hover (táctil), que se vea siempre: si no, no hay forma de descubrirlo. */
+@media (hover: none) {
+  .card__remove { opacity: 1; background: color-mix(in srgb, var(--ink) 45%, transparent); }
+}
+
 .card__title {
   font-family: var(--serif);
   font-size: 14.5px;
@@ -575,6 +606,20 @@ main { flex: 1; padding: 30px 0 72px; }
 
 .status-picker--compact button span { display: none; }
 .status-picker--compact button { font-size: 13px; padding: 7px 4px; }
+
+/* "Abandonado" es una sola palabra: sin espacio donde partir, un flex box
+   que se encoge por debajo de su ancho natural la deja sobresalir del
+   pill en vez de ajustarla. En vez de encogerla, se pasa a dos columnas. */
+@media (max-width: 480px) {
+  .status-picker:not(.status-picker--compact) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Red de seguridad: si aun así algo no cupiera, que se recorte dentro del
+   pill en vez de salirse de él. */
+.status-picker button { overflow: hidden; }
+.status-picker button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ============================================================ states ===== */
 .state {
@@ -925,6 +970,21 @@ main { flex: 1; padding: 30px 0 72px; }
 }
 
 .textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.link-danger {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  text-underline-offset: 3px;
+}
+
+.link-danger:hover { text-decoration-color: var(--danger); }
 
 .dialog__footer {
   display: flex;

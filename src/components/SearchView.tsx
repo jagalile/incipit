@@ -124,6 +124,14 @@ export function SearchView({ library, provider, apiKey, onOpen, onGoToSettings }
       year={book.year}
       status={library.statusOf(book.ref)}
       onOpen={() => onOpen(book)}
+      onRemove={
+        library.statusOf(book.ref)
+          ? () => {
+              const stored = library.books.find((b) => refKey(b.ref) === refKey(book.ref))
+              if (stored) library.remove(stored.id)
+            }
+          : undefined
+      }
       footer={
         <StatusPicker
           compact

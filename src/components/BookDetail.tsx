@@ -210,6 +210,20 @@ export function BookDetail({ seed, stored, library, provider, apiKey, onClose }:
                     ` · empezado el ${formatDate(stored?.startedAt)}`}
                 </p>
               )}
+
+              {stored && (
+                <button
+                  className="link-danger"
+                  onClick={() => {
+                    if (confirm(`¿Quitar «${stored.title}» de tu biblioteca?`)) {
+                      library.remove(stored.id)
+                      onClose()
+                    }
+                  }}
+                >
+                  Quitar de mi biblioteca
+                </button>
+              )}
             </div>
           </div>
 
@@ -284,26 +298,13 @@ export function BookDetail({ seed, stored, library, provider, apiKey, onClose }:
             </div>
           ) : null}
 
-          <div className="dialog__footer">
-            {detail?.link ? (
+          {detail?.link && (
+            <div className="dialog__footer">
               <a className="btn btn--sm" href={detail.link} target="_blank" rel="noreferrer">
                 {detail.ref.provider === 'google' ? 'Ver en Google Books ↗' : 'Ver en Open Library ↗'}
               </a>
-            ) : (
-              <span />
-            )}
-            {stored && (
-              <button
-                className="btn btn--sm btn--danger"
-                onClick={() => {
-                  library.remove(stored.id)
-                  onClose()
-                }}
-              >
-                Quitar de mi biblioteca
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

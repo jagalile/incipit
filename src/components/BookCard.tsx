@@ -11,6 +11,7 @@ interface Props {
   status?: BookStatus
   rating?: number
   onOpen: () => void
+  onRemove?: () => void
   footer?: React.ReactNode
 }
 
@@ -24,6 +25,7 @@ export function BookCard({
   status,
   rating,
   onOpen,
+  onRemove,
   footer,
 }: Props) {
   const [brokenCover, setBrokenCover] = useState(false)
@@ -55,6 +57,20 @@ export function BookCard({
           </span>
         )}
       </button>
+      {onRemove && (
+        <button
+          type="button"
+          className="card__remove"
+          aria-label={`Quitar «${title}» de tu biblioteca`}
+          title="Quitar de tu biblioteca"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (confirm(`¿Quitar «${title}» de tu biblioteca?`)) onRemove()
+          }}
+        >
+          ×
+        </button>
+      )}
       <div className="card__body">
         <h3 className="card__title">{title}</h3>
         <p className="card__author">{author}</p>

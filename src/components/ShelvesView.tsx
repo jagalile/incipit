@@ -220,6 +220,7 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
                     status={book.status}
                     rating={book.rating}
                     onOpen={() => onOpen(book)}
+                    onRemove={() => library.remove(book.id)}
                     footer={
                       <StatusPicker
                         compact
