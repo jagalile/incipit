@@ -13,11 +13,13 @@ import { ShelvesView } from './components/ShelvesView'
 
 type Tab = 'estantes' | 'buscar' | 'ajustes'
 
-const TABS: { id: Tab; label: string }[] = [
+// Ajustes no es una sección de contenido como las otras dos: vive aparte, en
+// el botón de engranaje junto al selector de tema.
+const NAV_TABS: { id: Tab; label: string }[] = [
   { id: 'estantes', label: 'Mis estantes' },
   { id: 'buscar', label: 'Buscar' },
-  { id: 'ajustes', label: 'Ajustes' },
 ]
+const ALL_TABS: Tab[] = ['estantes', 'buscar', 'ajustes']
 
 const THEME_CYCLE = { auto: 'light', light: 'dark', dark: 'auto' } as const
 const THEME_ICON = { auto: '◐', light: '☀', dark: '☾' } as const
@@ -26,7 +28,7 @@ const THEME_LABEL = { auto: 'automático', light: 'claro', dark: 'oscuro' } as c
 /** Los accesos directos del manifiesto abren la app en una vista concreta. */
 function initialTab(): Tab {
   const vista = new URLSearchParams(window.location.search).get('vista')
-  return TABS.some((t) => t.id === vista) ? (vista as Tab) : 'estantes'
+  return ALL_TABS.includes(vista as Tab) ? (vista as Tab) : 'estantes'
 }
 
 export default function App() {
@@ -88,7 +90,7 @@ export default function App() {
             <small>diario de lecturas</small>
           </div>
           <nav className="nav" aria-label="Secciones">
-            {TABS.map((t) => (
+            {NAV_TABS.map((t) => (
               <button key={t.id} aria-current={tab === t.id} onClick={() => setTab(t.id)}>
                 {t.label}
               </button>
@@ -101,6 +103,15 @@ export default function App() {
             title={`Tema ${THEME_LABEL[settings.theme]}`}
           >
             {THEME_ICON[settings.theme]}
+          </button>
+          <button
+            className="icon-btn"
+            aria-pressed={tab === 'ajustes'}
+            onClick={() => setTab('ajustes')}
+            aria-label="Ajustes"
+            title="Ajustes"
+          >
+            ⚙
           </button>
         </div>
       </header>
