@@ -1,5 +1,5 @@
 import type { BookResult, SearchField } from '../types'
-import { CatalogError } from './catalogCore'
+import { CatalogError, fetchWithRetry } from './catalogCore'
 import { parseSeries } from './series'
 
 const API = 'https://openlibrary.org'
@@ -84,7 +84,9 @@ function normalizeDoc(doc: RawDoc): BookResult {
 async function request(url: string, signal?: AbortSignal): Promise<any> {
   let res: Response
   try {
-    res = await fetch(url, { signal, headers: { Accept: 'application/json' } })
+    // Un 5xx se reintenta solo (fallo transitorio del servidor); un fallo de
+    // red, no -no hay nada que un reintento arregle-.
+    res = await fetchWithRetry(url, { signal, headers: { Accept: 'application/json' } })
   } catch (err) {
     if ((err as Error).name === 'AbortError') throw err
     throw new CatalogError(
@@ -102,7 +104,9 @@ async function request(url: string, signal?: AbortSignal): Promise<any> {
   }
   if (!res.ok) {
     throw new CatalogError(
-      `Open Library respondió con un error (${res.status}).`,
+      res.status >= 500
+        ? `Open Library ha fallado tras varios intentos (${res.status}). Es un fallo pasajero de su servidor: suele bastar con esperar unos segundos.`
+        : `Open Library respondió con un error (${res.status}).`,
       'server',
       'openlibrary',
     )
