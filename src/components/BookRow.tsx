@@ -37,12 +37,11 @@ export function BookRow({
 }: Props) {
   const [brokenCover, setBrokenCover] = useState(false)
   const author = authors.length ? authors.join(', ') : 'Autor desconocido'
-  // Fecha (o serie), páginas e ISBN en una sola línea.
-  const meta = [
-    series ? `${series}${seriesPosition ? ` · vol. ${seriesPosition}` : ''}` : year,
-    pageCount ? `${pageCount} págs.` : null,
-    isbn ? `ISBN ${isbn}` : null,
-  ]
+  // Dos líneas de datos: año y serie primero, páginas e ISBN debajo.
+  const dateAndSeries = [year, series ? `${series}${seriesPosition ? ` · vol. ${seriesPosition}` : ''}` : null]
+    .filter(Boolean)
+    .join(' · ')
+  const bibliographic = [pageCount ? `${pageCount} págs.` : null, isbn ? `ISBN ${isbn}` : null]
     .filter(Boolean)
     .join(' · ')
 
@@ -67,7 +66,8 @@ export function BookRow({
         <button type="button" className="book-row__body" onClick={onOpen}>
           <h3 className="book-row__title">{title}</h3>
           <p className="book-row__author">{author}</p>
-          {meta && <p className="book-row__meta">{meta}</p>}
+          {dateAndSeries && <p className="book-row__meta">{dateAndSeries}</p>}
+          {bibliographic && <p className="book-row__meta">{bibliographic}</p>}
           {!!rating && (
             <p className="card__rating" aria-label={`${rating} de 5 estrellas`}>
               {'★'.repeat(rating)}

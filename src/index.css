@@ -702,6 +702,9 @@ main { flex: 1; padding: 30px 0 72px; }
 }
 
 /* Fecha (o serie), páginas e ISBN, todo en una línea. */
+/* Dos líneas posibles: año/serie y, debajo, páginas/ISBN. La primera se
+   separa un poco del autor (son datos, no prosa); la segunda queda pegada
+   a la primera, sin otro salto — juntas leen como un mismo bloque. */
 .book-row__meta {
   font-size: 11px;
   line-height: 1.25;
@@ -710,10 +713,11 @@ main { flex: 1; padding: 30px 0 72px; }
   text-overflow: ellipsis;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  /* Un poco más separada del bloque título/autor: son datos, no prosa.
-     (margin, no gap: así el título y el autor quedan sin espacio extra
-     entre ellos mientras esta línea sí lo tiene). */
   margin: 4px 0 0;
+}
+
+.book-row__meta + .book-row__meta {
+  margin-top: 0;
 }
 
 .book-row__badge {
