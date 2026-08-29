@@ -469,20 +469,47 @@ main { flex: 1; padding: 30px 0 72px; }
   align-items: start;
 }
 
-/* Para "Leyendo ahora" en la portada: mismas tarjetas, pero en miniatura -es
-   un vistazo rápido para reconocer el libro, no el tamaño que tienen ya
-   dentro de su estante-. */
+/* Para "Leyendo ahora" en la portada: ya no es la tarjeta vertical de un
+   estante -portada+texto en horizontal, del alto de una miniatura, no del
+   de una cubierta entera-, para que se note de un vistazo que es un acceso
+   rápido y no el tamaño real que el libro tiene ya dentro de su estante. */
 .grid--compact {
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 14px 12px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 10px;
 }
 
-.card--compact { gap: 6px; }
+/* `.card.card--compact`, no `.card--compact` a secas: esta regla vive antes
+   que `.card` en la hoja, y con la misma especificidad perdería frente a
+   ella (flex-direction, gap, padding... se pisarían). El selector compuesto
+   gana siempre, esté donde esté declarado. */
+.card.card--compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: transform 0.16s, border-color 0.16s, box-shadow 0.16s;
+}
+
+.card.card--compact:hover { transform: translateY(-2px); border-color: var(--line-strong); box-shadow: var(--shadow); }
+
+.card--compact .card__cover {
+  flex: none;
+  width: 40px;
+}
+
+.card--compact .card__body { flex: 1 1 auto; }
 
 .card--compact .card__title {
   font-size: 12px;
-  -webkit-line-clamp: 1;
-  min-height: 1.3em;
+  line-height: 1.25;
+  display: block;
+  min-height: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card--compact .card__author {

@@ -61,10 +61,16 @@ export function BookCard({
           // Open Library devuelve un marcador de posición vacío cuando la obra no
           // tiene portada: si la imagen falla, se pinta la cubierta tipográfica.
           <img src={thumbnail} alt="" loading="lazy" onError={() => setBrokenCover(true)} />
+        ) : compact ? (
+          // La portada compacta es demasiado pequeña para el título entero:
+          // basta con la inicial, como en la vista de filas.
+          <span className="book-row__cover-fallback" aria-hidden="true">
+            {title.slice(0, 1)}
+          </span>
         ) : (
           <span className="card__fallback">
             <span>{title}</span>
-            {!compact && <small>{author}</small>}
+            <small>{author}</small>
           </span>
         )}
         {status && !compact && (
