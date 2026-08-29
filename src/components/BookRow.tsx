@@ -17,9 +17,12 @@ interface Props {
   footer?: React.ReactNode
 }
 
-/** La misma ficha que BookCard, pero en filas: portada fija a la izquierda;
- *  a la derecha, título/autor/datos y, debajo, el selector de estado
- *  ocupando ese mismo ancho de columna (no el ancho de la portada). */
+/** La misma ficha que BookCard, pero en filas: portada fija a la izquierda
+ *  (con la etiqueta de estado debajo, si la hay); a la derecha, título/
+ *  autor/datos y, debajo, el selector de estado ocupando ese mismo ancho de
+ *  columna (no el ancho de la portada). La etiqueta vive bajo la portada
+ *  -no en la fila de botones- para que estos midan siempre lo mismo, tenga
+ *  o no tenga estado el libro. */
 export function BookRow({
   title,
   authors,
@@ -47,20 +50,31 @@ export function BookRow({
 
   return (
     <article className="book-row">
-      <button
-        type="button"
-        className="book-row__cover"
-        onClick={onOpen}
-        aria-label={`Ver ficha de ${title}`}
-      >
-        {thumbnail && !brokenCover ? (
-          <img src={thumbnail} alt="" loading="lazy" onError={() => setBrokenCover(true)} />
-        ) : (
-          <span className="book-row__cover-fallback" aria-hidden="true">
-            {title.slice(0, 1)}
+      <div className="book-row__coverwrap">
+        <button
+          type="button"
+          className="book-row__cover"
+          onClick={onOpen}
+          aria-label={`Ver ficha de ${title}`}
+        >
+          {thumbnail && !brokenCover ? (
+            <img src={thumbnail} alt="" loading="lazy" onError={() => setBrokenCover(true)} />
+          ) : (
+            <span className="book-row__cover-fallback" aria-hidden="true">
+              {title.slice(0, 1)}
+            </span>
+          )}
+        </button>
+        {status && (
+          <span
+            className={`book-row__badge badge--${status}`}
+            title={STATUS_META[status].short}
+            aria-label={`Estado: ${STATUS_META[status].short}`}
+          >
+            {STATUS_META[status].icon}
           </span>
         )}
-      </button>
+      </div>
 
       <div className="book-row__right">
         <button type="button" className="book-row__body" onClick={onOpen}>
@@ -77,28 +91,24 @@ export function BookRow({
         </button>
 
         <div className="book-row__actions">
-          {status && (
-            <span className={`badge badge--${status} book-row__badge`}>
-              <em style={{ fontStyle: 'normal' }} aria-hidden="true">
-                {STATUS_META[status].icon}
-              </em>
-              {STATUS_META[status].short}
-            </span>
-          )}
           {footer}
-          {onRemove && (
-            <button
-              type="button"
-              className="icon-btn book-row__remove"
-              aria-label={`Quitar «${title}» de tu biblioteca`}
-              title="Quitar de tu biblioteca"
-              onClick={() => {
-                if (confirm(`¿Quitar «${title}» de tu biblioteca?`)) onRemove()
-              }}
-            >
-              ×
-            </button>
-          )}
+          {/* Se reserva el hueco siempre, esté o no el libro ya en la biblioteca:
+              si el botón entra y sale del layout, el selector de al lado (que
+              reparte el ancho que sobra) cambiaría de tamaño según la fila. */}
+          <button
+            type="button"
+            className="icon-btn book-row__remove"
+            aria-hidden={!onRemove}
+            tabIndex={onRemove ? 0 : -1}
+            style={onRemove ? undefined : { visibility: 'hidden', pointerEvents: 'none' }}
+            aria-label={`Quitar «${title}» de tu biblioteca`}
+            title="Quitar de tu biblioteca"
+            onClick={() => {
+              if (onRemove && confirm(`¿Quitar «${title}» de tu biblioteca?`)) onRemove()
+            }}
+          >
+            ×
+          </button>
         </div>
       </div>
     </article>

@@ -5,3 +5,6 @@ dist
 .vite
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+# Salvaguarda: capturas de scripts de prueba que a veces caen aquí por un
+# fallo al pasar la variable de entorno del directorio de scratch.
+/undefined/
