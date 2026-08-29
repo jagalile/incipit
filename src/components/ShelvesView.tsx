@@ -3,9 +3,11 @@ import { STATUSES, STATUS_META, type BookStatus, type StoredBook } from '../type
 import type { LibraryApi } from '../hooks/useLibrary'
 import { plural } from '../lib/plural'
 import { BookCard } from './BookCard'
+import { BookRow } from './BookRow'
 import { SearchIcon } from './SearchIcon'
 import { StatusPicker } from './StatusPicker'
 import { EmptyState } from './States'
+import { ViewToggle, type ResultsView } from './ViewToggle'
 import type { DetailSeed } from './BookDetail'
 
 type Sort = 'reciente' | 'titulo' | 'autor' | 'serie'
@@ -59,6 +61,10 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
   const [openShelf, setOpenShelf] = useState<BookStatus | null>(null)
   const [term, setTerm] = useState('')
   const [sort, setSort] = useState<Sort>('reciente')
+  // Fila por defecto, igual que en Buscar; es una preferencia de lectura, no
+  // algo propio de un estante en concreto, así que no se resetea al cambiar
+  // de uno a otro.
+  const [view, setView] = useState<ResultsView>('list')
 
   const openShelfView = (status: BookStatus) => {
     setOpenShelf(status)
@@ -81,29 +87,34 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
   // Ya vienen ordenados por actividad reciente desde useLibrary.
   const readingNow = library.byStatus.leyendo
 
-  const renderCard = (book: StoredBook) => (
-    <BookCard
-      key={book.id}
-      title={book.title}
-      authors={book.authors}
-      thumbnail={book.thumbnail}
-      series={book.series}
-      seriesPosition={book.seriesPosition}
-      year={book.year}
-      status={book.status}
-      rating={book.rating}
-      onOpen={() => onOpen(book)}
-      onRemove={() => library.remove(book.id)}
-      footer={
-        <StatusPicker
-          compact
-          idPrefix={book.id}
-          value={book.status}
-          onChange={(next) => library.setStatus(book.id, next)}
-        />
-      }
-    />
-  )
+  const renderCard = (book: StoredBook) => {
+    const Item = view === 'grid' ? BookCard : BookRow
+    return (
+      <Item
+        key={book.id}
+        title={book.title}
+        authors={book.authors}
+        thumbnail={book.thumbnail}
+        series={book.series}
+        seriesPosition={book.seriesPosition}
+        year={book.year}
+        pageCount={book.pageCount}
+        isbn={book.isbn}
+        status={book.status}
+        rating={book.rating}
+        onOpen={() => onOpen(book)}
+        onRemove={() => library.remove(book.id)}
+        footer={
+          <StatusPicker
+            compact
+            idPrefix={book.id}
+            value={book.status}
+            onChange={(next) => library.setStatus(book.id, next)}
+          />
+        }
+      />
+    )
+  }
 
   // Miniatura para "Leyendo ahora": solo portada, título y autor -para
   // gestionar el estado o ver más, la ficha completa está a un toque (onOpen).
@@ -192,6 +203,7 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
               </option>
             ))}
           </select>
+          <ViewToggle value={view} onChange={setView} />
         </div>
 
         {shelfBooks.length === 0 ? (
@@ -218,7 +230,7 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
             />
           )
         ) : (
-          <div className="grid">{shelfBooks.map(renderCard)}</div>
+          <div className={view === 'grid' ? 'grid' : 'list'}>{shelfBooks.map(renderCard)}</div>
         )}
       </section>
     )
