@@ -302,7 +302,10 @@ export function BookDetail({ seed, stored, library, provider, apiKey, onSearch, 
                 ))}
               </div>
             ) : (
-              <p className="hint">Este libro no tiene sinopsis en Google Books.</p>
+              <p className="hint">
+                Este libro no tiene sinopsis en{' '}
+                {detail?.ref.provider === 'google' ? 'Google Books' : 'Open Library'}.
+              </p>
             )}
           </div>
 

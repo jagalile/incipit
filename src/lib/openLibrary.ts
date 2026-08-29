@@ -139,11 +139,11 @@ function buildQuery(term: string, field: SearchField, onlySpanish: boolean): str
   }
 }
 
-async function run(
+async function rawSearch(
   q: string,
   startIndex: number,
   signal?: AbortSignal,
-): Promise<{ items: BookResult[]; total: number }> {
+): Promise<{ docs: RawDoc[]; total: number }> {
   const params = new URLSearchParams({
     q,
     fields: FIELDS,
@@ -152,9 +152,18 @@ async function run(
   })
   const data = await request(`${API}/search.json?${params}`, signal)
   return {
-    items: (data.docs ?? []).filter((d: RawDoc) => d.key).map(normalizeDoc),
+    docs: (data.docs ?? []).filter((d: RawDoc) => d.key),
     total: data.numFound ?? 0,
   }
+}
+
+async function run(
+  q: string,
+  startIndex: number,
+  signal?: AbortSignal,
+): Promise<{ items: BookResult[]; total: number }> {
+  const { docs, total } = await rawSearch(q, startIndex, signal)
+  return { items: docs.map(normalizeDoc), total }
 }
 
 function normalizeForMatch(value: string): string {
@@ -162,6 +171,21 @@ function normalizeForMatch(value: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+}
+
+/**
+ * "Contiene" no basta como único nivel: un recopilatorio titulado "A Dance
+ * With Dragons, A Feast for Crows, A Storm of Swords..." también "contiene"
+ * el título exacto que se busca, y con un solo nivel de relevancia competía
+ * en igualdad con el libro suelto -de qué lado caía dependía del orden, no
+ * siempre estable, en que Open Library los devolvía-. La coincidencia
+ * exacta manda siempre sobre la que solo lo contiene de pasada.
+ */
+function relevanceScore(haystack: string, needle: string): number {
+  if (haystack === needle) return 3
+  if (haystack.startsWith(needle) || haystack.endsWith(needle)) return 2
+  if (haystack.includes(needle)) return 1
+  return 0
 }
 
 /**
@@ -174,14 +198,14 @@ function normalizeForMatch(value: string): string {
  */
 function reorderByRelevance(items: BookResult[], term: string, field: SearchField): BookResult[] {
   const needle = normalizeForMatch(term)
-  const relevant = (item: BookResult) => {
+  const score = (item: BookResult) => {
     const haystack = normalizeForMatch(
       field === 'autor' ? item.authors.join(' ') : field === 'serie' ? (item.series ?? '') : item.title,
     )
-    return haystack.includes(needle)
+    return relevanceScore(haystack, needle)
   }
   // Sort estable: dentro de cada grupo se conserva el orden que ya trae Open Library.
-  return [...items].sort((a, b) => Number(relevant(b)) - Number(relevant(a)))
+  return [...items].sort((a, b) => score(b) - score(a))
 }
 
 export async function search(
@@ -251,10 +275,28 @@ export async function findMatch(
     const byIsbn = await run(`isbn:${clean(seed.isbn)}`, 0, opts.signal)
     if (byIsbn.items.length) return byIsbn.items[0]
   }
+  // Consulta libre, sin restringir a campos exactos con `author:"..."`: ese
+  // filtro exige una coincidencia literal, y una diferencia mínima de
+  // formato -"George R.R. Martin" en un CSV importado frente a "George R.
+  // R. Martin" tal cual lo tiene indexado Open Library- basta para no
+  // encontrar nada, aunque el libro esté perfectamente catalogado
+  // (comprobado contra la API real durante una importación de Goodreads).
   const author = seed.authors[0]
-  const q = [`title:"${clean(seed.title)}"`, author && `author:"${clean(author)}"`]
-    .filter(Boolean)
-    .join(' ')
-  const found = await run(q, 0, opts.signal)
-  return found.items[0] ?? null
+  const q = [clean(seed.title), author && clean(author)].filter(Boolean).join(' ')
+  const { docs } = await rawSearch(q, 0, opts.signal)
+  if (!docs.length) return null
+  // Se puntúa sobre el título de la OBRA (`doc.title`), no el de la edición
+  // que normalizeDoc() elegiría mostrar: esa suele venir ya traducida
+  // (p. ej. "Festín de Cuervos" para una búsqueda de "A Feast for Crows"),
+  // y compararla contra el título con el que se importó el libro le hacía
+  // perder la coincidencia exacta frente a un ómnibus cuyo título de bulto
+  // sí contenía el buscado de pasada -comprobado contra la API real
+  // durante una importación de Goodreads-.
+  const needle = normalizeForMatch(seed.title)
+  const ranked = [...docs].sort(
+    (a, b) =>
+      relevanceScore(normalizeForMatch(first(b.title) ?? ''), needle) -
+      relevanceScore(normalizeForMatch(first(a.title) ?? ''), needle),
+  )
+  return normalizeDoc(ranked[0])
 }
