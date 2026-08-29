@@ -1119,10 +1119,17 @@ main { flex: 1; padding: 30px 0 72px; }
 @keyframes rise { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 .dialog__close {
+  /* Antes usaba float:right para pegarse a la esquina, combinado con
+     position:sticky para seguir viéndose al hacer scroll. Esa mezcla es
+     poco fiable entre motores: en Safari de iOS el hueco que el float
+     reservaba no se liberaba correctamente, y todo el contenido de debajo
+     -selector de estado, notas, sinopsis- quedaba encogido, dejando una
+     columna vacía a la derecha en toda la ficha. margin-left:auto empuja el
+     botón al borde igual de bien, sin float y sin ese problema. */
   position: sticky;
   top: 10px;
-  float: right;
-  margin: 10px 12px 0 0;
+  display: block;
+  margin: 10px 12px 0 auto;
   z-index: 2;
 }
 
