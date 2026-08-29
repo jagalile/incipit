@@ -46,17 +46,20 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
 
 /**
  * Un 503 "backendError" es un fallo transitorio documentado en las APIs de
- * Google (Sheets, Analytics, Books...): la misma búsqueda que falla ahora
- * suele funcionar un instante después. Se reintenta con espera creciente
- * ante fallos de servidor (5xx) o de red, pero nunca ante errores del
- * cliente (429 de cuota, 403 de autenticación...), donde reintentar no
- * cambia nada.
+ * Google (Sheets, Analytics, Books...); Google Books en concreto tiene
+ * además un 503 propio de "no se pudo determinar la ubicación" ligado a la
+ * geolocalización por IP, más frecuente en redes móviles/de operador. Ambos
+ * se resuelven solos, pero no siempre en el primer segundo: 2 reintentos
+ * cortos no bastaban -de ahí que a mano, esperando y pulsando "Reintentar",
+ * sí funcionara-. Con 4 reintentos y hasta ~2.5s de espera entre cada uno,
+ * la ventana total (~7s en el peor caso) se acerca a lo que ya se veía que
+ * hacía falta esperar a mano.
  */
 export async function fetchWithRetry(
   url: string,
   opts: { signal?: AbortSignal; headers?: HeadersInit; retries?: number } = {},
 ): Promise<Response> {
-  const { signal, headers, retries = 2 } = opts
+  const { signal, headers, retries = 4 } = opts
   for (let attempt = 0; ; attempt++) {
     let res: Response | undefined
     let networkError: unknown
@@ -70,6 +73,6 @@ export async function fetchWithRetry(
       if (res) return res
       throw networkError
     }
-    await wait(400 * 2 ** attempt + Math.random() * 200, signal)
+    await wait(Math.min(500 * 2 ** attempt, 2500) + Math.random() * 300, signal)
   }
 }

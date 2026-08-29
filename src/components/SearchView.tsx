@@ -49,6 +49,7 @@ export function SearchView({
   const [results, setResults] = useState<BookResult[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [slowSearch, setSlowSearch] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errorKind, setErrorKind] = useState<string>('server')
@@ -91,6 +92,18 @@ export function SearchView({
       })
     return () => controller.abort()
   }, [query, field, onlySpanish, provider, apiKey, attempt])
+
+  // Con los reintentos automáticos ante un fallo de servidor, una búsqueda
+  // puede tardar unos segundos en vez de ser instantánea; pasado ese rato,
+  // un aviso evita que parezca que la página se ha quedado colgada.
+  useEffect(() => {
+    if (!loading) {
+      setSlowSearch(false)
+      return
+    }
+    const timer = setTimeout(() => setSlowSearch(true), 1500)
+    return () => clearTimeout(timer)
+  }, [loading])
 
   const loadMore = useCallback(async () => {
     setLoadingMore(true)
@@ -245,7 +258,16 @@ export function SearchView({
         />
       )}
 
-      {loading && <CardsSkeleton />}
+      {loading && (
+        <>
+          {slowSearch && (
+            <p className="hint" style={{ marginBottom: 14 }} aria-live="polite">
+              Está tardando más de lo normal — puede que el servidor esté ocupado. Reintentando…
+            </p>
+          )}
+          <CardsSkeleton />
+        </>
+      )}
 
       {!loading && error && (
         <ErrorState
