@@ -8,6 +8,8 @@ interface Props {
   series?: string
   seriesPosition?: string
   year?: string
+  pageCount?: number
+  isbn?: string
   status?: BookStatus
   rating?: number
   onOpen: () => void
@@ -22,6 +24,8 @@ export function BookCard({
   series,
   seriesPosition,
   year,
+  pageCount,
+  isbn,
   status,
   rating,
   onOpen,
@@ -80,6 +84,12 @@ export function BookCard({
           {series
             ? `${series}${seriesPosition ? ` · vol. ${seriesPosition}` : ''}`
             : (year ?? ' ')}
+        </p>
+        {/* Igual de siempre-presente que la línea de arriba, por la misma razón. */}
+        <p className="card__meta">
+          {[pageCount ? `${pageCount} p.` : null, isbn ? `ISBN ${isbn}` : null]
+            .filter(Boolean)
+            .join(' · ') || ' '}
         </p>
         {!!rating && (
           <p className="card__rating" aria-label={`${rating} de 5 estrellas`}>

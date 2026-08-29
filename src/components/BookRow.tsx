@@ -8,14 +8,19 @@ interface Props {
   series?: string
   seriesPosition?: string
   year?: string
+  pageCount?: number
+  isbn?: string
   status?: BookStatus
   rating?: number
+  /** Sinopsis ya resuelta. `undefined` mientras se está cargando (o si no aplica). */
+  description?: string
+  descriptionLoading?: boolean
   onOpen: () => void
   onRemove?: () => void
   footer?: React.ReactNode
 }
 
-/** La misma ficha que BookCard, pero en una fila horizontal compacta. */
+/** La misma ficha que BookCard, pero en una fila horizontal con más detalle. */
 export function BookRow({
   title,
   authors,
@@ -23,43 +28,58 @@ export function BookRow({
   series,
   seriesPosition,
   year,
+  pageCount,
+  isbn,
   status,
   rating,
+  description,
+  descriptionLoading,
   onOpen,
   onRemove,
   footer,
 }: Props) {
   const [brokenCover, setBrokenCover] = useState(false)
   const author = authors.length ? authors.join(', ') : 'Autor desconocido'
+  const meta = [pageCount ? `${pageCount} págs.` : null, isbn ? `ISBN ${isbn}` : null]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
-    <article className="row">
-      <button type="button" className="row__cover" onClick={onOpen} aria-label={`Ver ficha de ${title}`}>
+    <article className="book-row">
+      <button type="button" className="book-row__cover" onClick={onOpen} aria-label={`Ver ficha de ${title}`}>
         {thumbnail && !brokenCover ? (
           <img src={thumbnail} alt="" loading="lazy" onError={() => setBrokenCover(true)} />
         ) : (
-          <span className="row__cover-fallback" aria-hidden="true">
+          <span className="book-row__cover-fallback" aria-hidden="true">
             {title.slice(0, 1)}
           </span>
         )}
       </button>
 
-      <button type="button" className="row__body" onClick={onOpen}>
-        <h3 className="row__title">{title}</h3>
-        <p className="row__author">{author}</p>
-        <p className="row__series">
-          {series ? `${series}${seriesPosition ? ` · vol. ${seriesPosition}` : ''}` : (year ?? ' ')}
+      <button type="button" className="book-row__body" onClick={onOpen}>
+        <h3 className="book-row__title">{title}</h3>
+        <p className="book-row__author">{author}</p>
+        <p className="book-row__series">
+          {series ? `${series}${seriesPosition ? ` · vol. ${seriesPosition}` : ''}` : (year ?? ' ')}
         </p>
+        {meta && <p className="book-row__meta">{meta}</p>}
         {!!rating && (
           <p className="card__rating" aria-label={`${rating} de 5 estrellas`}>
             {'★'.repeat(rating)}
             <span style={{ opacity: 0.3 }}>{'★'.repeat(5 - rating)}</span>
           </p>
         )}
+        {descriptionLoading && !description && (
+          <div className="book-row__excerpt-loading" aria-hidden="true">
+            <div className="skeleton skeleton--line" />
+            <div className="skeleton skeleton--line short" />
+          </div>
+        )}
+        {description && <p className="book-row__excerpt">{description}</p>}
       </button>
 
       {status && (
-        <span className={`badge badge--${status} row__badge`}>
+        <span className={`badge badge--${status} book-row__badge`}>
           <em style={{ fontStyle: 'normal' }} aria-hidden="true">
             {STATUS_META[status].icon}
           </em>
@@ -67,12 +87,12 @@ export function BookRow({
         </span>
       )}
 
-      <div className="row__actions">
+      <div className="book-row__actions">
         {footer}
         {onRemove && (
           <button
             type="button"
-            className="icon-btn row__remove"
+            className="icon-btn book-row__remove"
             aria-label={`Quitar «${title}» de tu biblioteca`}
             title="Quitar de tu biblioteca"
             onClick={() => {

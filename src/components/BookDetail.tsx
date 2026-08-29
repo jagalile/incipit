@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CatalogError, findBookFor, getBook, refKey, type BookRef, type Provider } from '../lib/catalog'
+import { stripHtml } from '../lib/text'
 import { STATUS_META, type BookResult, type BookStatus, type SearchField, type StoredBook } from '../types'
 import type { LibraryApi } from '../hooks/useLibrary'
 import { StatusPicker } from './StatusPicker'
@@ -28,18 +29,14 @@ interface Props {
 }
 
 /** Convierte la descripción (que llega con HTML ligero) en párrafos de texto plano. */
-function toParagraphs(html?: string): string[] {
-  if (!html) return []
-  return html
+function toParagraphs(text?: string): string[] {
+  if (!text) return []
+  return text
+    .replace(/\r\n/g, '\n')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
     .split(/\n{2,}/)
-    .map((p) => p.trim())
+    .map((p) => stripHtml(p))
     .filter(Boolean)
 }
 

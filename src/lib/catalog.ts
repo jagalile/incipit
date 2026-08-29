@@ -68,3 +68,13 @@ export async function findBookFor(
 ): Promise<BookResult | null> {
   return impl(opts.provider).findMatch(seed, opts)
 }
+
+/**
+ * Solo la sinopsis, para completar una fila de resultados sin pagar el coste
+ * de una ficha completa. Google Books ya la trae en la propia búsqueda; Open
+ * Library no, así que aquí es la única fuente que hace falta pedir aparte.
+ */
+export async function getExcerpt(ref: BookRef, signal?: AbortSignal): Promise<string | undefined> {
+  if (ref.provider !== 'openlibrary') return undefined
+  return openLibrary.fetchExcerpt(ref.id, signal)
+}

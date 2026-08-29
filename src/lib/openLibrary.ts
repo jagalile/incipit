@@ -205,6 +205,17 @@ function descriptionOf(value: unknown): string | undefined {
   return undefined
 }
 
+/**
+ * Solo la sinopsis, sin resolver autores ni el resto de la ficha: `detail()`
+ * hace hasta 4 peticiones (la obra + hasta 3 autores) y está pensada para
+ * abrir UNA ficha bajo demanda, no para pedirla de golpe en cada fila de una
+ * lista de resultados.
+ */
+export async function fetchExcerpt(id: string, signal?: AbortSignal): Promise<string | undefined> {
+  const work = await request(`${API}/works/${encodeURIComponent(id)}.json`, signal)
+  return descriptionOf(work.description)
+}
+
 export async function detail(
   id: string,
   opts: { signal?: AbortSignal } = {},
