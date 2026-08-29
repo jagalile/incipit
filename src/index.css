@@ -625,7 +625,7 @@ main { flex: 1; padding: 30px 0 72px; }
    tocar. */
 .book-row {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 12px;
   padding: 10px;
   border: 1px solid var(--line);
@@ -641,15 +641,20 @@ main { flex: 1; padding: 30px 0 72px; }
   min-width: 0;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 6px;
 }
 
+/* align-items:stretch en la fila hace que esta columna mida lo mismo que la
+   de al lado (texto + botones); la portada se queda arriba y la etiqueta se
+   empuja al fondo con space-between, para quedar a la misma altura que la
+   fila de botones de la derecha, sea cual sea la longitud del texto. */
 .book-row__coverwrap {
   flex: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
 }
 
 .book-row__cover {
@@ -732,12 +737,12 @@ main { flex: 1; padding: 30px 0 72px; }
    resaltado, así que el texto no hace falta aquí. */
 .book-row__badge {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
 }
 
@@ -753,19 +758,22 @@ main { flex: 1; padding: 30px 0 72px; }
 .book-row__actions .status-picker--compact {
   flex: 1;
   max-width: 440px;
+  /* 28px de alto en total (con el borde de 1px incluido), igualando la
+     etiqueta bajo la portada y el botón de quitar. */
+  padding: 1px;
 }
 
 .book-row__actions .status-picker--compact button {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
   padding: 5px 6px;
 }
 
 .book-row__remove {
   flex: none;
-  width: 36px;
-  height: 36px;
-  font-size: 17px;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
   color: var(--ink-3);
 }
 
