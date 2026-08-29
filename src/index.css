@@ -404,6 +404,11 @@ main { flex: 1; padding: 30px 0 72px; }
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
   gap: 22px 18px;
+  /* Sin esto, la fila estira cada tarjeta a la altura de la más alta del grupo
+     (el título de 1 línea vs 2 líneas ya deja ambas del mismo alto real, pero
+     por si acaso: que cada tarjeta mida lo que su contenido, no lo que su
+     vecina). */
+  align-items: start;
 }
 
 /* Sin esto los ítems heredan `min-width: auto` y un título largo ensancha
@@ -539,6 +544,9 @@ main { flex: 1; padding: 30px 0 72px; }
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: anywhere;
+  /* Un título de una línea no debe dejar el pie de la tarjeta (el selector de
+     estado) más arriba que en la de al lado: se reservan siempre 2 líneas. */
+  min-height: calc(1.3em * 2);
 }
 
 .card__author {
@@ -559,6 +567,148 @@ main { flex: 1; padding: 30px 0 72px; }
 }
 
 .card__rating { font-size: 11.5px; color: var(--leyendo); letter-spacing: 1px; }
+
+/* ======================================================== view toggle ==== */
+.view-toggle {
+  display: flex;
+  gap: 2px;
+  flex: none;
+  background: var(--paper-3);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.view-toggle button {
+  border: 0;
+  background: transparent;
+  width: 32px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--ink-3);
+  transition: background 0.16s, color 0.16s;
+}
+
+.view-toggle button:hover { color: var(--ink); }
+
+.view-toggle button[aria-pressed='true'] {
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+/* =============================================================== list ==== */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper-2);
+  transition: border-color 0.16s, box-shadow 0.16s;
+}
+
+.row:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
+
+.row__cover {
+  flex: none;
+  position: relative;
+  width: 46px;
+  aspect-ratio: 2 / 3;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: linear-gradient(150deg, var(--paper-3), var(--paper-2));
+}
+
+.row__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.row__cover-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.row__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.row__title {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 14.5px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__author {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__series {
+  font-size: 11.5px;
+  color: var(--accent-ink);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__badge {
+  flex: none;
+}
+
+.row__actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.row__remove {
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+  color: var(--ink-3);
+}
+
+.row__remove:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+
+@media (max-width: 560px) {
+  /* La portada y el texto caben de sobra en una línea; solo los botones de
+     estado necesitan su propia fila cuando el ancho aprieta. */
+  .row { flex-wrap: wrap; }
+  .row__actions { flex-basis: 100%; justify-content: space-between; margin-top: 6px; }
+}
 
 /* badges por estado */
 .badge {

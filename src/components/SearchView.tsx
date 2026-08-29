@@ -6,9 +6,11 @@ import type { LibraryApi } from '../hooks/useLibrary'
 import { useDebounced } from '../hooks/useDebounced'
 import { plural } from '../lib/plural'
 import { BookCard } from './BookCard'
+import { BookRow } from './BookRow'
 import { SearchIcon } from './SearchIcon'
 import { StatusPicker } from './StatusPicker'
 import { CardsSkeleton, EmptyState, ErrorState } from './States'
+import { ViewToggle, type ResultsView } from './ViewToggle'
 import type { DetailSeed } from './BookDetail'
 
 const FIELDS: { id: SearchField; label: string; placeholder: string }[] = [
@@ -43,6 +45,7 @@ export function SearchView({
   const [term, setTerm] = useState('')
   const [field, setField] = useState<SearchField>('todo')
   const [onlySpanish, setOnlySpanish] = useState(true)
+  const [view, setView] = useState<ResultsView>('grid')
   const [results, setResults] = useState<BookResult[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -131,35 +134,38 @@ export function SearchView({
 
   const placeholder = FIELDS.find((f) => f.id === field)!.placeholder
 
-  const renderCard = (book: BookResult) => (
-    <BookCard
-      key={refKey(book.ref)}
-      title={book.title}
-      authors={book.authors}
-      thumbnail={book.thumbnail}
-      series={book.series}
-      seriesPosition={book.seriesPosition}
-      year={book.year}
-      status={library.statusOf(book.ref)}
-      onOpen={() => onOpen(book)}
-      onRemove={
-        library.statusOf(book.ref)
-          ? () => {
-              const stored = library.books.find((b) => refKey(b.ref) === refKey(book.ref))
-              if (stored) library.remove(stored.id)
-            }
-          : undefined
-      }
-      footer={
-        <StatusPicker
-          compact
-          idPrefix={refKey(book.ref)}
-          value={library.statusOf(book.ref)}
-          onChange={(status) => library.addFromSearch(book, status)}
-        />
-      }
-    />
-  )
+  const renderCard = (book: BookResult) => {
+    const Item = view === 'grid' ? BookCard : BookRow
+    return (
+      <Item
+        key={refKey(book.ref)}
+        title={book.title}
+        authors={book.authors}
+        thumbnail={book.thumbnail}
+        series={book.series}
+        seriesPosition={book.seriesPosition}
+        year={book.year}
+        status={library.statusOf(book.ref)}
+        onOpen={() => onOpen(book)}
+        onRemove={
+          library.statusOf(book.ref)
+            ? () => {
+                const stored = library.books.find((b) => refKey(b.ref) === refKey(book.ref))
+                if (stored) library.remove(stored.id)
+              }
+            : undefined
+        }
+        footer={
+          <StatusPicker
+            compact
+            idPrefix={refKey(book.ref)}
+            value={library.statusOf(book.ref)}
+            onChange={(status) => library.addFromSearch(book, status)}
+          />
+        }
+      />
+    )
+  }
 
   return (
     <section>
@@ -210,6 +216,7 @@ export function SearchView({
         >
           Solo en español
         </button>
+        <ViewToggle value={view} onChange={setView} />
       </div>
 
       {!query && !loading && (
@@ -288,11 +295,11 @@ export function SearchView({
                   <h2 className="shelf__title">{group.name}</h2>
                   <span className="shelf__count">{group.items.length}</span>
                 </div>
-                <div className="grid">{group.items.map(renderCard)}</div>
+                <div className={view === 'grid' ? 'grid' : 'list'}>{group.items.map(renderCard)}</div>
               </div>
             ))
           ) : (
-            <div className="grid">{results.map(renderCard)}</div>
+            <div className={view === 'grid' ? 'grid' : 'list'}>{results.map(renderCard)}</div>
           )}
 
           {results.length < total && (

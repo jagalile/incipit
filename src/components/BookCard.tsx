@@ -74,13 +74,13 @@ export function BookCard({
       <div className="card__body">
         <h3 className="card__title">{title}</h3>
         <p className="card__author">{author}</p>
-        {series && (
-          <p className="card__series">
-            {series}
-            {seriesPosition ? ` · vol. ${seriesPosition}` : ''}
-          </p>
-        )}
-        {!series && year && <p className="card__series">{year}</p>}
+        {/* Siempre una línea, aunque no haya ni serie ni año: si a veces está y a
+            veces no, el pie de la tarjeta queda a distinta altura entre vecinas. */}
+        <p className="card__series">
+          {series
+            ? `${series}${seriesPosition ? ` · vol. ${seriesPosition}` : ''}`
+            : (year ?? ' ')}
+        </p>
         {!!rating && (
           <p className="card__rating" aria-label={`${rating} de 5 estrellas`}>
             {'★'.repeat(rating)}
