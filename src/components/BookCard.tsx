@@ -34,6 +34,15 @@ export function BookCard({
 }: Props) {
   const [brokenCover, setBrokenCover] = useState(false)
   const author = authors.length ? authors.join(', ') : 'Autor desconocido'
+  // Mismo criterio que en las filas: año y serie juntos en una línea,
+  // páginas e ISBN en la siguiente -antes la serie tapaba el año en vez de
+  // acompañarlo, y "p." decía algo distinto que "págs." en la otra vista-.
+  const dateAndSeries = [year, series ? `${series}${seriesPosition ? ` · vol. ${seriesPosition}` : ''}` : null]
+    .filter(Boolean)
+    .join(' · ')
+  const bibliographic = [pageCount ? `${pageCount} págs.` : null, isbn ? `ISBN ${isbn}` : null]
+    .filter(Boolean)
+    .join(' · ')
   return (
     <article className="card">
       <button
@@ -80,17 +89,9 @@ export function BookCard({
         <p className="card__author">{author}</p>
         {/* Siempre una línea, aunque no haya ni serie ni año: si a veces está y a
             veces no, el pie de la tarjeta queda a distinta altura entre vecinas. */}
-        <p className="card__series">
-          {series
-            ? `${series}${seriesPosition ? ` · vol. ${seriesPosition}` : ''}`
-            : (year ?? ' ')}
-        </p>
+        <p className="card__series">{dateAndSeries || ' '}</p>
         {/* Igual de siempre-presente que la línea de arriba, por la misma razón. */}
-        <p className="card__meta">
-          {[pageCount ? `${pageCount} p.` : null, isbn ? `ISBN ${isbn}` : null]
-            .filter(Boolean)
-            .join(' · ') || ' '}
-        </p>
+        <p className="card__meta">{bibliographic || ' '}</p>
         {!!rating && (
           <p className="card__rating" aria-label={`${rating} de 5 estrellas`}>
             {'★'.repeat(rating)}
