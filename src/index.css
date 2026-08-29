@@ -982,6 +982,25 @@ main { flex: 1; padding: 30px 0 72px; }
 
 .textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
+.link-inline {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.16s, color 0.16s;
+  cursor: pointer;
+}
+
+.link-inline:hover,
+.link-inline:focus-visible {
+  color: var(--accent-ink);
+  text-decoration-color: currentColor;
+}
+
 .link-danger {
   border: 0;
   background: transparent;

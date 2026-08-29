@@ -1,10 +1,15 @@
 /**
- * Google Books no expone el nombre de la serie como campo, pero tanto sus títulos
- * como los de Goodreads la incluyen entre paréntesis:
- *   "El nombre del viento (Crónica del asesino de reyes, 1)"
- *   "Dune (Dune #1)"
+ * Google Books y Open Library no exponen el nombre de la serie como campo, pero
+ * el título lo suele incluir entre paréntesis, con el número separado de tres
+ * formas distintas según la fuente:
+ *   "El nombre del viento (Crónica del asesino de reyes, 1)"  — coma
+ *   "Dune (Dune #1)"                                          — almohadilla
+ *   "Camino de los reyes (El Archivo de las Tormentas 1)"     — solo espacio
+ * El separador exige coma/almohadilla O al menos un espacio (nunca cero
+ * caracteres) para no partir por la mitad una palabra que termine en dígito.
  */
-const SERIES_RE = /[([]\s*([^()[\]]+?)\s*(?:[,#]\s*(?:n[.º°]?\s*)?([\d]+(?:[.,]\d+)?))?\s*[)\]]\s*$/i
+const SERIES_RE =
+  /[([]\s*([^()[\]]+?)(?:(?:[,#]\s*|\s+)(?:n[.º°]?\s*)?(\d+(?:[.,]\d+)?))?\s*[)\]]\s*$/i
 
 const NOISE = /^(edici[oó]n|vol\.?|volumen|tapa|ilustrad|bolsillo|traducci|spanish|english|libro electr)/i
 

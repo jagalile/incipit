@@ -123,8 +123,13 @@ function buildQuery(term: string, field: SearchField, onlySpanish: boolean): str
       return `title:"${t}"${lang}`
     case 'autor':
       return `author:"${t}"${lang}`
+    // El campo `series` de Open Library no es una lista de sagas: es una
+    // etiqueta de comunidad casi siempre en inglés (p. ej. "series:Stormlight
+    // Archive") que solo cubre un puñado de libros de cada saga (comprobado
+    // contra la API: 2 de 6 en El Archivo de las Tormentas). El nombre en
+    // español vive en el propio título, entre paréntesis, así que se busca ahí.
     case 'serie':
-      return `series:"${t}"${lang}`
+      return `title:"${t}"${lang}`
     default:
       return `${t}${lang}`
   }
@@ -184,11 +189,6 @@ export async function search(
   const start = opts.startIndex ?? 0
   let result = await run(buildQuery(term, field, onlySpanish), start, opts.signal)
 
-  // El campo `series` de Open Library está poco poblado: si no da nada, se busca
-  // el nombre de la saga en los títulos, que es donde suele aparecer.
-  if (field === 'serie' && result.total === 0) {
-    result = await run(buildQuery(term, 'titulo', onlySpanish), start, opts.signal)
-  }
   // Una búsqueda en español sin resultados casi siempre significa que la obra no
   // tiene edición traducida catalogada, no que no exista.
   if (result.total === 0 && onlySpanish) {

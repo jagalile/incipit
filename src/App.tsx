@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PROVIDERS, refKey } from './lib/catalog'
+import type { SearchField } from './types'
 import { plural } from './lib/plural'
 import { useInstall } from './hooks/useInstall'
 import { useLibrary } from './hooks/useLibrary'
@@ -34,6 +35,14 @@ export default function App() {
   const [tab, setTab] = useState<Tab>(initialTab)
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
   const [detail, setDetail] = useState<(DetailSeed & { id?: string }) | null>(null)
+  const [pendingSearch, setPendingSearch] = useState<{ term: string; field: SearchField } | null>(null)
+
+  /** Pulsar el autor o la serie en una ficha lleva a la pestaña Buscar con esa consulta lista. */
+  const goSearch = useCallback((term: string, field: SearchField) => {
+    setPendingSearch({ term, field })
+    setTab('buscar')
+    setDetail(null)
+  }, [])
 
   useEffect(() => {
     saveSettings(settings)
@@ -123,6 +132,8 @@ export default function App() {
               apiKey={settings.googleApiKey}
               onOpen={setDetail}
               onGoToSettings={() => setTab('ajustes')}
+              pendingQuery={pendingSearch}
+              onConsumePending={() => setPendingSearch(null)}
             />
           )}
           {tab === 'ajustes' && (
@@ -164,6 +175,7 @@ export default function App() {
           library={library}
           provider={settings.provider}
           apiKey={settings.googleApiKey}
+          onSearch={goSearch}
           onClose={() => setDetail(null)}
         />
       )}

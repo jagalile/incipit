@@ -26,9 +26,20 @@ interface Props {
   apiKey?: string
   onOpen: (seed: DetailSeed) => void
   onGoToSettings: () => void
+  /** Consulta que llega desde fuera (p. ej. al pulsar un autor en una ficha). */
+  pendingQuery?: { term: string; field: SearchField } | null
+  onConsumePending?: () => void
 }
 
-export function SearchView({ library, provider, apiKey, onOpen, onGoToSettings }: Props) {
+export function SearchView({
+  library,
+  provider,
+  apiKey,
+  onOpen,
+  onGoToSettings,
+  pendingQuery,
+  onConsumePending,
+}: Props) {
   const [term, setTerm] = useState('')
   const [field, setField] = useState<SearchField>('todo')
   const [onlySpanish, setOnlySpanish] = useState(true)
@@ -41,6 +52,13 @@ export function SearchView({ library, provider, apiKey, onOpen, onGoToSettings }
   const [attempt, setAttempt] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const query = useDebounced(term.trim())
+
+  useEffect(() => {
+    if (!pendingQuery) return
+    setTerm(pendingQuery.term)
+    setField(pendingQuery.field)
+    onConsumePending?.()
+  }, [pendingQuery, onConsumePending])
 
   useEffect(() => {
     if (!query) {

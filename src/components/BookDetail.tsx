@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CatalogError, findBookFor, getBook, refKey, type BookRef, type Provider } from '../lib/catalog'
-import { STATUS_META, type BookResult, type BookStatus, type StoredBook } from '../types'
+import { STATUS_META, type BookResult, type BookStatus, type SearchField, type StoredBook } from '../types'
 import type { LibraryApi } from '../hooks/useLibrary'
 import { StatusPicker } from './StatusPicker'
 import { ErrorState } from './States'
@@ -23,6 +23,7 @@ interface Props {
   library: LibraryApi
   provider: Provider
   apiKey?: string
+  onSearch: (term: string, field: SearchField) => void
   onClose: () => void
 }
 
@@ -60,7 +61,7 @@ function formatDate(iso?: string): string | undefined {
     : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export function BookDetail({ seed, stored, library, provider, apiKey, onClose }: Props) {
+export function BookDetail({ seed, stored, library, provider, apiKey, onSearch, onClose }: Props) {
   const [detail, setDetail] = useState<BookResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -180,12 +181,31 @@ export function BookDetail({ seed, stored, library, provider, apiKey, onClose }:
             <div>
               <h2>{view.title}</h2>
               <p className="dialog__author">
-                {view.authors.length ? view.authors.join(', ') : 'Autor desconocido'}
+                {view.authors.length
+                  ? view.authors.map((author, i) => (
+                      <span key={author}>
+                        {i > 0 && ', '}
+                        <button
+                          type="button"
+                          className="link-inline"
+                          onClick={() => onSearch(author, 'autor')}
+                        >
+                          {author}
+                        </button>
+                      </span>
+                    ))
+                  : 'Autor desconocido'}
               </p>
 
               {view.series && (
                 <p className="card__series" style={{ marginTop: -6, marginBottom: 12 }}>
-                  {view.series}
+                  <button
+                    type="button"
+                    className="link-inline"
+                    onClick={() => onSearch(view.series!, 'serie')}
+                  >
+                    {view.series}
+                  </button>
                   {view.seriesPosition ? ` · volumen ${view.seriesPosition}` : ''}
                 </p>
               )}
