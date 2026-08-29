@@ -105,6 +105,20 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
     />
   )
 
+  // Miniatura para "Leyendo ahora": solo portada, título y autor -para
+  // gestionar el estado o ver más, la ficha completa está a un toque (onOpen).
+  const renderQuickCard = (book: StoredBook) => (
+    <BookCard
+      key={book.id}
+      compact
+      title={book.title}
+      authors={book.authors}
+      thumbnail={book.thumbnail}
+      status={book.status}
+      onOpen={() => onOpen(book)}
+    />
+  )
+
   if (library.books.length === 0) {
     return (
       <section>
@@ -225,6 +239,24 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
         </p>
       </div>
 
+      <div className="shelf">
+        <div className="shelf__head">
+          <h2 className="shelf__title">Leyendo ahora</h2>
+          <span className="shelf__count">{readingNow.length}</span>
+          <span className="shelf__desc">Acceso rápido a lo que tienes entre manos.</span>
+        </div>
+        {readingNow.length === 0 ? (
+          <EmptyState
+            inline
+            icon={STATUS_META.leyendo.icon}
+            title="Nada en marcha"
+            description="Cuando empieces un libro, márcalo como «Leyendo» para tenerlo aquí a mano."
+          />
+        ) : (
+          <div className="grid grid--compact">{readingNow.map(renderQuickCard)}</div>
+        )}
+      </div>
+
       <div className="shelf-tiles">
         {STATUSES.map((status) => (
           <button
@@ -241,24 +273,6 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
             <span className="shelf-tile__desc">{STATUS_META[status].description}</span>
           </button>
         ))}
-      </div>
-
-      <div className="shelf">
-        <div className="shelf__head">
-          <h2 className="shelf__title">Leyendo ahora</h2>
-          <span className="shelf__count">{readingNow.length}</span>
-          <span className="shelf__desc">Acceso rápido a lo que tienes entre manos.</span>
-        </div>
-        {readingNow.length === 0 ? (
-          <EmptyState
-            inline
-            icon={STATUS_META.leyendo.icon}
-            title="Nada en marcha"
-            description="Cuando empieces un libro, márcalo como «Leyendo» para tenerlo aquí a mano."
-          />
-        ) : (
-          <div className="grid">{readingNow.map(renderCard)}</div>
-        )}
       </div>
     </section>
   )

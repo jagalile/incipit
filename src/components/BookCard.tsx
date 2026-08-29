@@ -15,6 +15,11 @@ interface Props {
   onOpen: () => void
   onRemove?: () => void
   footer?: React.ReactNode
+  /** Versión reducida, solo título/autor y portada: para el acceso rápido de
+   *  "Leyendo ahora" en la portada, donde el tamaño grande no hace falta -es
+   *  solo para reconocer el libro de un vistazo, la ficha completa vive un
+   *  toque más allá-. */
+  compact?: boolean
 }
 
 export function BookCard({
@@ -31,6 +36,7 @@ export function BookCard({
   onOpen,
   onRemove,
   footer,
+  compact,
 }: Props) {
   const [brokenCover, setBrokenCover] = useState(false)
   const author = authors.length ? authors.join(', ') : 'Autor desconocido'
@@ -44,7 +50,7 @@ export function BookCard({
     .filter(Boolean)
     .join(' · ')
   return (
-    <article className="card">
+    <article className={`card${compact ? ' card--compact' : ''}`}>
       <button
         type="button"
         className="card__cover"
@@ -58,10 +64,10 @@ export function BookCard({
         ) : (
           <span className="card__fallback">
             <span>{title}</span>
-            <small>{author}</small>
+            {!compact && <small>{author}</small>}
           </span>
         )}
-        {status && (
+        {status && !compact && (
           <span className={`card__badge badge--${status}`}>
             <em style={{ fontStyle: 'normal' }} aria-hidden="true">
               {STATUS_META[status].icon}
@@ -70,7 +76,7 @@ export function BookCard({
           </span>
         )}
       </button>
-      {onRemove && (
+      {onRemove && !compact && (
         <button
           type="button"
           className="card__remove"
@@ -87,19 +93,25 @@ export function BookCard({
       <div className="card__body">
         <h3 className="card__title">{title}</h3>
         <p className="card__author">{author}</p>
-        {/* Siempre una línea, aunque no haya ni serie ni año: si a veces está y a
-            veces no, el pie de la tarjeta queda a distinta altura entre vecinas. */}
-        <p className="card__series">{dateAndSeries || ' '}</p>
-        {/* Igual de siempre-presente que la línea de arriba, por la misma razón. */}
-        <p className="card__meta">{bibliographic || ' '}</p>
-        {!!rating && (
-          <p className="card__rating" aria-label={`${rating} de 5 estrellas`}>
-            {'★'.repeat(rating)}
-            <span style={{ opacity: 0.3 }}>{'★'.repeat(5 - rating)}</span>
-          </p>
+        {!compact && (
+          <>
+            {/* Siempre una línea, aunque no haya ni serie ni año: si a veces
+                está y a veces no, el pie de la tarjeta queda a distinta altura
+                entre vecinas. */}
+            <p className="card__series">{dateAndSeries || ' '}</p>
+            {/* Igual de siempre-presente que la línea de arriba, por la misma
+                razón. */}
+            <p className="card__meta">{bibliographic || ' '}</p>
+            {!!rating && (
+              <p className="card__rating" aria-label={`${rating} de 5 estrellas`}>
+                {'★'.repeat(rating)}
+                <span style={{ opacity: 0.3 }}>{'★'.repeat(5 - rating)}</span>
+              </p>
+            )}
+          </>
         )}
       </div>
-      {footer}
+      {!compact && footer}
     </article>
   )
 }

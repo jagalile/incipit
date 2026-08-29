@@ -469,6 +469,26 @@ main { flex: 1; padding: 30px 0 72px; }
   align-items: start;
 }
 
+/* Para "Leyendo ahora" en la portada: mismas tarjetas, pero en miniatura -es
+   un vistazo rápido para reconocer el libro, no el tamaño que tienen ya
+   dentro de su estante-. */
+.grid--compact {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 14px 12px;
+}
+
+.card--compact { gap: 6px; }
+
+.card--compact .card__title {
+  font-size: 12px;
+  -webkit-line-clamp: 1;
+  min-height: 1.3em;
+}
+
+.card--compact .card__author {
+  font-size: 10.5px;
+}
+
 /* Sin esto los ítems heredan `min-width: auto` y un título largo ensancha
    la columna hasta desbordar la página en pantallas estrechas. */
 .grid > * { min-width: 0; }
