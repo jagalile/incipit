@@ -45,7 +45,7 @@ export function SearchView({
   const [term, setTerm] = useState('')
   const [field, setField] = useState<SearchField>('todo')
   const [onlySpanish, setOnlySpanish] = useState(true)
-  const [view, setView] = useState<ResultsView>('grid')
+  const [view, setView] = useState<ResultsView>('list')
   const [results, setResults] = useState<BookResult[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
