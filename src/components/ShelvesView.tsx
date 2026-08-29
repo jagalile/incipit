@@ -26,6 +26,24 @@ function normalize(value: string): string {
     .replace(/[\u0300-\u036f]/g, '')
 }
 
+function sortBooks(list: StoredBook[], sort: Sort): StoredBook[] {
+  const copy = [...list]
+  switch (sort) {
+    case 'titulo':
+      return copy.sort((a, b) => collator.compare(a.title, b.title))
+    case 'autor':
+      return copy.sort((a, b) => collator.compare(a.authors[0] ?? 'zzz', b.authors[0] ?? 'zzz'))
+    case 'serie':
+      return copy.sort(
+        (a, b) =>
+          collator.compare(a.series ?? 'zzz', b.series ?? 'zzz') ||
+          Number(a.seriesPosition ?? 99) - Number(b.seriesPosition ?? 99),
+      )
+    default:
+      return copy.sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
+  }
+}
+
 interface Props {
   library: LibraryApi
   onOpen: (seed: DetailSeed) => void
@@ -33,50 +51,59 @@ interface Props {
   onGoToGoodreads: () => void
 }
 
+/** Portada de la app: no carga toda la biblioteca de golpe (cada portada es
+ *  una petición de imagen) sino solo lo imprescindible -los estantes con su
+ *  recuento, y "leyendo ahora" como acceso rápido-. El resto de libros se
+ *  piden solo al entrar en su estante. */
 export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: Props) {
-  const [filter, setFilter] = useState<BookStatus | 'todos'>('todos')
+  const [openShelf, setOpenShelf] = useState<BookStatus | null>(null)
   const [term, setTerm] = useState('')
   const [sort, setSort] = useState<Sort>('reciente')
 
+  const openShelfView = (status: BookStatus) => {
+    setOpenShelf(status)
+    setTerm('')
+    setSort('reciente')
+  }
+
   const query = normalize(term.trim())
 
-  const visible = useMemo(() => {
+  const shelfBooks = useMemo(() => {
+    if (!openShelf) return []
     const matches = (book: StoredBook) =>
       !query ||
       normalize(book.title).includes(query) ||
       book.authors.some((a) => normalize(a).includes(query)) ||
       (book.series ? normalize(book.series).includes(query) : false)
+    return sortBooks(library.byStatus[openShelf].filter(matches), sort)
+  }, [openShelf, library.byStatus, query, sort])
 
-    const sorted = (list: StoredBook[]) => {
-      const copy = [...list]
-      switch (sort) {
-        case 'titulo':
-          return copy.sort((a, b) => collator.compare(a.title, b.title))
-        case 'autor':
-          return copy.sort((a, b) => collator.compare(a.authors[0] ?? 'zzz', b.authors[0] ?? 'zzz'))
-        case 'serie':
-          return copy.sort(
-            (a, b) =>
-              collator.compare(a.series ?? 'zzz', b.series ?? 'zzz') ||
-              Number(a.seriesPosition ?? 99) - Number(b.seriesPosition ?? 99),
-          )
-        default:
-          return copy.sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
+  // Ya vienen ordenados por actividad reciente desde useLibrary.
+  const readingNow = library.byStatus.leyendo
+
+  const renderCard = (book: StoredBook) => (
+    <BookCard
+      key={book.id}
+      title={book.title}
+      authors={book.authors}
+      thumbnail={book.thumbnail}
+      series={book.series}
+      seriesPosition={book.seriesPosition}
+      year={book.year}
+      status={book.status}
+      rating={book.rating}
+      onOpen={() => onOpen(book)}
+      onRemove={() => library.remove(book.id)}
+      footer={
+        <StatusPicker
+          compact
+          idPrefix={book.id}
+          value={book.status}
+          onChange={(next) => library.setStatus(book.id, next)}
+        />
       }
-    }
-
-    const result = {} as Record<BookStatus, StoredBook[]>
-    for (const status of STATUSES) {
-      result[status] = sorted(library.byStatus[status].filter(matches))
-    }
-    return result
-  }, [library.byStatus, query, sort])
-
-  const shown = filter === 'todos' ? STATUSES : [filter]
-  const totalVisible = shown.reduce((n, s) => n + visible[s].length, 0)
-  const finishedThisYear = library.byStatus.leido.filter(
-    (b) => b.finishedAt?.startsWith(String(new Date().getFullYear())),
-  ).length
+    />
+  )
 
   if (library.books.length === 0) {
     return (
@@ -104,6 +131,89 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
     )
   }
 
+  if (openShelf) {
+    const meta = STATUS_META[openShelf]
+    return (
+      <section>
+        <button type="button" className="btn btn--ghost shelf-back" onClick={() => setOpenShelf(null)}>
+          ← Tus estantes
+        </button>
+        <div className="page-head">
+          <h1>{meta.label}</h1>
+          <p>
+            {plural(library.byStatus[openShelf].length, 'libro', 'libros')} · {meta.description}
+          </p>
+        </div>
+
+        <div className="toolbar">
+          <div className="field">
+            <span className="field__icon">
+              <SearchIcon />
+            </span>
+            <input
+              type="search"
+              value={term}
+              placeholder={`Buscar en «${meta.label}» por título, autor o serie…`}
+              aria-label={`Buscar en ${meta.label}`}
+              onChange={(e) => setTerm(e.target.value)}
+            />
+            {term && (
+              <button className="field__clear" onClick={() => setTerm('')} aria-label="Limpiar búsqueda">
+                ×
+              </button>
+            )}
+          </div>
+          <label className="sr-only" htmlFor="sort">
+            Ordenar por
+          </label>
+          <select
+            id="sort"
+            className="select"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as Sort)}
+          >
+            {SORTS.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {shelfBooks.length === 0 ? (
+          query ? (
+            <EmptyState
+              icon="🔍"
+              title={`Nada coincide con «${term}»`}
+              description="Prueba con otro título, autor o serie."
+            />
+          ) : (
+            <EmptyState
+              icon={meta.icon}
+              title={`Nada en «${meta.label}»`}
+              description={
+                openShelf === 'leyendo'
+                  ? 'Cuando empieces un libro, muévelo aquí para tenerlo a mano.'
+                  : 'Los libros que marques con este estado aparecerán en este estante.'
+              }
+              action={
+                <button className="btn btn--primary" onClick={onGoToSearch}>
+                  Buscar un libro
+                </button>
+              }
+            />
+          )
+        ) : (
+          <div className="grid">{shelfBooks.map(renderCard)}</div>
+        )}
+      </section>
+    )
+  }
+
+  const finishedThisYear = library.byStatus.leido.filter((b) =>
+    b.finishedAt?.startsWith(String(new Date().getFullYear())),
+  ).length
+
   return (
     <section>
       <div className="page-head">
@@ -115,127 +225,41 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
         </p>
       </div>
 
-      <div className="stats">
-        <button
-          className="stat"
-          aria-pressed={filter === 'todos'}
-          onClick={() => setFilter('todos')}
-        >
-          <span className="stat__value">{library.books.length}</span>
-          <span className="stat__label">Todos</span>
-        </button>
+      <div className="shelf-tiles">
         {STATUSES.map((status) => (
           <button
             key={status}
-            className="stat"
-            aria-pressed={filter === status}
-            onClick={() => setFilter(filter === status ? 'todos' : status)}
+            type="button"
+            className="shelf-tile"
+            onClick={() => openShelfView(status)}
           >
-            <span className="stat__value">{library.byStatus[status].length}</span>
-            <span className="stat__label">{STATUS_META[status].label}</span>
+            <span className={`shelf-tile__icon badge--${status}`} aria-hidden="true">
+              {STATUS_META[status].icon}
+            </span>
+            <span className="shelf-tile__count">{library.byStatus[status].length}</span>
+            <span className="shelf-tile__label">{STATUS_META[status].label}</span>
+            <span className="shelf-tile__desc">{STATUS_META[status].description}</span>
           </button>
         ))}
       </div>
 
-      <div className="toolbar">
-        <div className="field">
-          <span className="field__icon">
-            <SearchIcon />
-          </span>
-          <input
-            type="search"
-            value={term}
-            placeholder="Filtrar por título, autor o serie…"
-            aria-label="Filtrar mis libros"
-            onChange={(e) => setTerm(e.target.value)}
-          />
-          {term && (
-            <button className="field__clear" onClick={() => setTerm('')} aria-label="Limpiar filtro">
-              ×
-            </button>
-          )}
+      <div className="shelf">
+        <div className="shelf__head">
+          <h2 className="shelf__title">Leyendo ahora</h2>
+          <span className="shelf__count">{readingNow.length}</span>
+          <span className="shelf__desc">Acceso rápido a lo que tienes entre manos.</span>
         </div>
-        <label className="sr-only" htmlFor="sort">
-          Ordenar por
-        </label>
-        <select
-          id="sort"
-          className="select"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as Sort)}
-        >
-          {SORTS.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+        {readingNow.length === 0 ? (
+          <EmptyState
+            inline
+            icon={STATUS_META.leyendo.icon}
+            title="Nada en marcha"
+            description="Cuando empieces un libro, márcalo como «Leyendo» para tenerlo aquí a mano."
+          />
+        ) : (
+          <div className="grid">{readingNow.map(renderCard)}</div>
+        )}
       </div>
-
-      {query && totalVisible === 0 && (
-        <EmptyState
-          icon="🔍"
-          title={`Nada coincide con «${term}»`}
-          description="Ese libro no está todavía en tus estantes. Búscalo en Google Books para añadirlo."
-          action={
-            <button className="btn btn--primary" onClick={onGoToSearch}>
-              Buscarlo y añadirlo
-            </button>
-          }
-        />
-      )}
-
-      {shown.map((status) => {
-        const books = visible[status]
-        if (query && books.length === 0) return null
-        return (
-          <div className="shelf" key={status}>
-            <div className="shelf__head">
-              <h2 className="shelf__title">{STATUS_META[status].label}</h2>
-              <span className="shelf__count">{books.length}</span>
-              <span className="shelf__desc">{STATUS_META[status].description}</span>
-            </div>
-            {books.length === 0 ? (
-              <EmptyState
-                inline
-                icon={STATUS_META[status].icon}
-                title={`Nada en «${STATUS_META[status].label}»`}
-                description={
-                  status === 'leyendo'
-                    ? 'Cuando empieces un libro, muévelo aquí para tenerlo a mano.'
-                    : 'Los libros que marques con este estado aparecerán en este estante.'
-                }
-              />
-            ) : (
-              <div className="grid">
-                {books.map((book) => (
-                  <BookCard
-                    key={book.id}
-                    title={book.title}
-                    authors={book.authors}
-                    thumbnail={book.thumbnail}
-                    series={book.series}
-                    seriesPosition={book.seriesPosition}
-                    year={book.year}
-                    status={book.status}
-                    rating={book.rating}
-                    onOpen={() => onOpen(book)}
-                    onRemove={() => library.remove(book.id)}
-                    footer={
-                      <StatusPicker
-                        compact
-                        idPrefix={book.id}
-                        value={book.status}
-                        onChange={(next) => library.setStatus(book.id, next)}
-                      />
-                    }
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      })}
     </section>
   )
 }

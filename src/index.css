@@ -364,6 +364,64 @@ main { flex: 1; padding: 30px 0 72px; }
   font-weight: 600;
 }
 
+/* ======================================================= shelf tiles ==== */
+/* La portada de la app: cada casilla es un estante entero (sin cargar sus
+   libros), con su icono, su recuento y una descripción -pulsarla es lo
+   único que trae ya los libros de ese estante. */
+.shelf-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin-bottom: 38px;
+}
+
+.shelf-tile {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  transition: transform 0.16s, border-color 0.16s, box-shadow 0.16s;
+}
+
+.shelf-tile:hover { transform: translateY(-2px); border-color: var(--line-strong); box-shadow: var(--shadow); }
+
+.shelf-tile__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+}
+
+.shelf-tile__count {
+  font-family: var(--serif);
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.shelf-tile__label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.shelf-tile__desc {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  line-height: 1.35;
+}
+
+.shelf-back {
+  margin: -8px 0 8px -18px;
+}
+
 /* ============================================================ shelves ==== */
 .shelf { margin-bottom: 42px; }
 
