@@ -9,15 +9,17 @@ import type { Settings } from './types'
 import { BookDetail, type DetailSeed } from './components/BookDetail'
 import { SettingsView } from './components/SettingsView'
 import { SearchView } from './components/SearchView'
+import { ShelfIcon } from './components/ShelfIcon'
 import { ShelvesView } from './components/ShelvesView'
+import { SearchIcon } from './components/SearchIcon'
 
 type Tab = 'estantes' | 'buscar' | 'ajustes'
 
 // Ajustes no es una sección de contenido como las otras dos: vive aparte, en
 // el botón de engranaje junto al selector de tema.
-const NAV_TABS: { id: Tab; label: string }[] = [
-  { id: 'estantes', label: 'Mis estantes' },
-  { id: 'buscar', label: 'Buscar' },
+const NAV_TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: 'estantes', label: 'Mis estantes', icon: <ShelfIcon /> },
+  { id: 'buscar', label: 'Buscar', icon: <SearchIcon /> },
 ]
 const ALL_TABS: Tab[] = ['estantes', 'buscar', 'ajustes']
 
@@ -89,13 +91,6 @@ export default function App() {
             Incipit
             <small>diario de lecturas</small>
           </div>
-          <nav className="nav" aria-label="Secciones">
-            {NAV_TABS.map((t) => (
-              <button key={t.id} aria-current={tab === t.id} onClick={() => setTab(t.id)}>
-                {t.label}
-              </button>
-            ))}
-          </nav>
           <button
             className="icon-btn"
             onClick={() => updateSettings({ theme: THEME_CYCLE[settings.theme] })}
@@ -177,6 +172,17 @@ export default function App() {
           <span>{plural(library.books.length, 'libro', 'libros')} en la estantería</span>
         </div>
       </footer>
+
+      <nav className="bottom-nav" aria-label="Secciones">
+        <div className="bottom-nav__inner">
+          {NAV_TABS.map((t) => (
+            <button key={t.id} aria-current={tab === t.id} onClick={() => setTab(t.id)}>
+              {t.icon}
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </nav>
 
       {detail && (
         <BookDetail
