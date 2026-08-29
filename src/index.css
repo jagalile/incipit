@@ -513,6 +513,12 @@ main { flex: 1; padding: 30px 0 72px; }
 
 .card.card--compact:hover { transform: translateY(-2px); border-color: var(--line-strong); box-shadow: var(--shadow); }
 
+/* El chip entero ya se levanta al pasar el ratón (arriba): sin esto, la
+   portada de dentro se levantaría además por su cuenta -la misma regla que
+   ya usan las tarjetas grandes-, y las dos animaciones sumadas la
+   desalinean del texto de al lado durante la transición. */
+.card.card--compact:hover .card__cover { transform: none; box-shadow: var(--shadow); }
+
 .card--compact .card__cover {
   flex: none;
   width: 40px;

@@ -49,8 +49,37 @@ export function BookCard({
   const bibliographic = [pageCount ? `${pageCount} págs.` : null, isbn ? `ISBN ${isbn}` : null]
     .filter(Boolean)
     .join(' · ')
+
+  if (compact) {
+    // Un solo botón para todo el chip: antes solo la portada (40px) abría la
+    // ficha y el título/autor de al lado -la mayor parte del área visible-
+    // no reaccionaba al toque.
+    return (
+      <button
+        type="button"
+        className="card card--compact"
+        onClick={onOpen}
+        aria-label={`Ver ficha de ${title}`}
+      >
+        <span className="card__cover" aria-hidden="true">
+          {thumbnail && !brokenCover ? (
+            <img src={thumbnail} alt="" loading="lazy" onError={() => setBrokenCover(true)} />
+          ) : (
+            // La portada compacta es demasiado pequeña para el título entero:
+            // basta con la inicial, como en la vista de filas.
+            <span className="book-row__cover-fallback">{title.slice(0, 1)}</span>
+          )}
+        </span>
+        <span className="card__body">
+          <span className="card__title">{title}</span>
+          <span className="card__author">{author}</span>
+        </span>
+      </button>
+    )
+  }
+
   return (
-    <article className={`card${compact ? ' card--compact' : ''}`}>
+    <article className="card">
       <button
         type="button"
         className="card__cover"
@@ -61,19 +90,13 @@ export function BookCard({
           // Open Library devuelve un marcador de posición vacío cuando la obra no
           // tiene portada: si la imagen falla, se pinta la cubierta tipográfica.
           <img src={thumbnail} alt="" loading="lazy" onError={() => setBrokenCover(true)} />
-        ) : compact ? (
-          // La portada compacta es demasiado pequeña para el título entero:
-          // basta con la inicial, como en la vista de filas.
-          <span className="book-row__cover-fallback" aria-hidden="true">
-            {title.slice(0, 1)}
-          </span>
         ) : (
           <span className="card__fallback">
             <span>{title}</span>
             <small>{author}</small>
           </span>
         )}
-        {status && !compact && (
+        {status && (
           <span className={`card__badge badge--${status}`}>
             <em style={{ fontStyle: 'normal' }} aria-hidden="true">
               {STATUS_META[status].icon}
@@ -82,7 +105,7 @@ export function BookCard({
           </span>
         )}
       </button>
-      {onRemove && !compact && (
+      {onRemove && (
         <button
           type="button"
           className="card__remove"
@@ -99,25 +122,19 @@ export function BookCard({
       <div className="card__body">
         <h3 className="card__title">{title}</h3>
         <p className="card__author">{author}</p>
-        {!compact && (
-          <>
-            {/* Siempre una línea, aunque no haya ni serie ni año: si a veces
-                está y a veces no, el pie de la tarjeta queda a distinta altura
-                entre vecinas. */}
-            <p className="card__series">{dateAndSeries || ' '}</p>
-            {/* Igual de siempre-presente que la línea de arriba, por la misma
-                razón. */}
-            <p className="card__meta">{bibliographic || ' '}</p>
-            {!!rating && (
-              <p className="card__rating" aria-label={`${rating} de 5 estrellas`}>
-                {'★'.repeat(rating)}
-                <span style={{ opacity: 0.3 }}>{'★'.repeat(5 - rating)}</span>
-              </p>
-            )}
-          </>
+        {/* Siempre una línea, aunque no haya ni serie ni año: si a veces está y a
+            veces no, el pie de la tarjeta queda a distinta altura entre vecinas. */}
+        <p className="card__series">{dateAndSeries || ' '}</p>
+        {/* Igual de siempre-presente que la línea de arriba, por la misma razón. */}
+        <p className="card__meta">{bibliographic || ' '}</p>
+        {!!rating && (
+          <p className="card__rating" aria-label={`${rating} de 5 estrellas`}>
+            {'★'.repeat(rating)}
+            <span style={{ opacity: 0.3 }}>{'★'.repeat(5 - rating)}</span>
+          </p>
         )}
       </div>
-      {!compact && footer}
+      {footer}
     </article>
   )
 }
