@@ -617,15 +617,16 @@ main { flex: 1; padding: 30px 0 72px; }
 
 /* Con prefijo propio: ".row" a secas ya es una utilidad genérica (grupos de
    botones en los paneles de Ajustes) y colisionaba con estas reglas.
-   Estructura fija en dos filas, siempre (no solo en móvil): arriba portada +
-   texto, abajo el selector de estado a todo lo ancho. Un selector con
-   etiquetas de texto no cabe en una sola línea de 4 en un móvil sin
-   desbordar ("Abandonado" no entra en ~80px), así que aquí se usa el
-   solo-icono, pero a un tamaño cómodo de tocar. */
+   Portada fija a la izquierda; a la derecha, una columna con el texto arriba
+   y el selector de estado debajo, ocupando ese mismo ancho de columna (no el
+   ancho de la portada). Un selector con etiquetas de texto no cabe en una
+   sola línea de 4 en un móvil sin desbordar ("Abandonado" no entra en
+   ~80px), así que aquí se usa el solo-icono, pero a un tamaño cómodo de
+   tocar. */
 .book-row {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 14px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -635,10 +636,12 @@ main { flex: 1; padding: 30px 0 72px; }
 
 .book-row:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
 
-.book-row__main {
+.book-row__right {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .book-row__cover {
@@ -667,15 +670,14 @@ main { flex: 1; padding: 30px 0 72px; }
 }
 
 .book-row__body {
-  flex: 1 1 auto;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
   text-align: left;
   border: 0;
   background: transparent;
-  padding: 2px 0;
+  padding: 0;
+  width: 100%;
 }
 
 .book-row__title {

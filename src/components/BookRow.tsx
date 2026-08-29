@@ -17,8 +17,9 @@ interface Props {
   footer?: React.ReactNode
 }
 
-/** La misma ficha que BookCard, pero en filas: portada a la izquierda, texto a
- *  la derecha y el selector de estado en su propia línea a todo lo ancho. */
+/** La misma ficha que BookCard, pero en filas: portada fija a la izquierda;
+ *  a la derecha, título/autor/datos y, debajo, el selector de estado
+ *  ocupando ese mismo ancho de columna (no el ancho de la portada). */
 export function BookRow({
   title,
   authors,
@@ -47,22 +48,22 @@ export function BookRow({
 
   return (
     <article className="book-row">
-      <div className="book-row__main">
-        <button
-          type="button"
-          className="book-row__cover"
-          onClick={onOpen}
-          aria-label={`Ver ficha de ${title}`}
-        >
-          {thumbnail && !brokenCover ? (
-            <img src={thumbnail} alt="" loading="lazy" onError={() => setBrokenCover(true)} />
-          ) : (
-            <span className="book-row__cover-fallback" aria-hidden="true">
-              {title.slice(0, 1)}
-            </span>
-          )}
-        </button>
+      <button
+        type="button"
+        className="book-row__cover"
+        onClick={onOpen}
+        aria-label={`Ver ficha de ${title}`}
+      >
+        {thumbnail && !brokenCover ? (
+          <img src={thumbnail} alt="" loading="lazy" onError={() => setBrokenCover(true)} />
+        ) : (
+          <span className="book-row__cover-fallback" aria-hidden="true">
+            {title.slice(0, 1)}
+          </span>
+        )}
+      </button>
 
+      <div className="book-row__right">
         <button type="button" className="book-row__body" onClick={onOpen}>
           <h3 className="book-row__title">{title}</h3>
           <p className="book-row__author">{author}</p>
@@ -74,31 +75,31 @@ export function BookRow({
             </p>
           )}
         </button>
-      </div>
 
-      <div className="book-row__actions">
-        {status && (
-          <span className={`badge badge--${status} book-row__badge`}>
-            <em style={{ fontStyle: 'normal' }} aria-hidden="true">
-              {STATUS_META[status].icon}
-            </em>
-            {STATUS_META[status].short}
-          </span>
-        )}
-        {footer}
-        {onRemove && (
-          <button
-            type="button"
-            className="icon-btn book-row__remove"
-            aria-label={`Quitar «${title}» de tu biblioteca`}
-            title="Quitar de tu biblioteca"
-            onClick={() => {
-              if (confirm(`¿Quitar «${title}» de tu biblioteca?`)) onRemove()
-            }}
-          >
-            ×
-          </button>
-        )}
+        <div className="book-row__actions">
+          {status && (
+            <span className={`badge badge--${status} book-row__badge`}>
+              <em style={{ fontStyle: 'normal' }} aria-hidden="true">
+                {STATUS_META[status].icon}
+              </em>
+              {STATUS_META[status].short}
+            </span>
+          )}
+          {footer}
+          {onRemove && (
+            <button
+              type="button"
+              className="icon-btn book-row__remove"
+              aria-label={`Quitar «${title}» de tu biblioteca`}
+              title="Quitar de tu biblioteca"
+              onClick={() => {
+                if (confirm(`¿Quitar «${title}» de tu biblioteca?`)) onRemove()
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
     </article>
   )
