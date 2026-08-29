@@ -651,10 +651,18 @@ main { flex: 1; padding: 30px 0 72px; }
    fila de botones de la derecha, sea cual sea la longitud del texto. */
 .book-row__coverwrap {
   flex: none;
+  /* 88px, no 52 (el ancho de la portada): "Abandonado" en texto necesita
+     ~85px con su relleno, medido en el propio navegador; forzarlo a la
+     anchura de la portada solo dejaba sitio para recortarlo con puntos
+     suspensivos. La portada se centra dentro. */
+  width: 88px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
+  /* Mínimo entre portada y etiqueta: space-between reparte lo que sobre por
+     encima de esto, pero nunca menos (que no lleguen a tocarse). */
+  gap: 8px;
 }
 
 .book-row__cover {
@@ -735,15 +743,20 @@ main { flex: 1; padding: 30px 0 72px; }
 /* Circular e icono-solo: a los 52px de la portada no le cabe un texto
    como "Abandonado", y el propio selector de debajo ya repite el icono
    resaltado, así que el texto no hace falta aquí. */
+/* Solo texto, sin icono: a los 64px de la columna un glifo aparte no
+   aportaba nada que el propio texto no dijera ya. Ancho fijo de la columna
+   (arriba) para que el texto más largo no descuadre la fila con las demás. */
 .book-row__badge {
   flex: none;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  font-size: 13px;
+  max-width: 100%;
+  padding: 8px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .book-row__actions {

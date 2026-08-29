@@ -66,12 +66,8 @@ export function BookRow({
           )}
         </button>
         {status && (
-          <span
-            className={`book-row__badge badge--${status}`}
-            title={STATUS_META[status].short}
-            aria-label={`Estado: ${STATUS_META[status].short}`}
-          >
-            {STATUS_META[status].icon}
+          <span className={`book-row__badge badge--${status}`} title={STATUS_META[status].short}>
+            {STATUS_META[status].short}
           </span>
         )}
       </div>
