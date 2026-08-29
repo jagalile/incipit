@@ -175,6 +175,54 @@ function reorderByRelevance(items: BookResult[], term: string, field: SearchFiel
   return [...items].sort((a, b) => Number(relevant(b)) - Number(relevant(a)))
 }
 
+/** Título completo, y cada mitad si viene partido por "/" — habitual en
+ *  ediciones bilingües: "Juramentada / Oathbringer". */
+function titleKeys(title: string): string[] {
+  return title
+    .split('/')
+    .map((part) => normalizeForMatch(part.trim()))
+    .filter(Boolean)
+}
+
+/**
+ * Cuando una reedición traducida no se enlaza como edición de la obra
+ * original, Open Library termina con dos fichas de "obra" separadas para el
+ * mismo libro: cada una con su propia portada y sus propios metadatos —
+ * comprobado contra la API, la más reciente suele no tener ni sinopsis ni
+ * categorías propias. Se fusionan cuando comparten autor y alguna forma del
+ * título, quedándose con la ficha de año más antiguo (la original suele
+ * acumular más metadatos que una reedición recién catalogada) y rellenando
+ * lo que le falte con la otra.
+ */
+function dedupe(items: BookResult[]): BookResult[] {
+  const groups: { author: string; keys: string[]; members: BookResult[] }[] = []
+  for (const item of items) {
+    const author = normalizeForMatch(item.authors[0] ?? '')
+    const keys = titleKeys(item.title)
+    const group = author && groups.find((g) => g.author === author && g.keys.some((k) => keys.includes(k)))
+    if (group) {
+      group.members.push(item)
+      continue
+    }
+    groups.push({ author, keys, members: [item] })
+  }
+  return groups.map(({ members }) => {
+    if (members.length === 1) return members[0]
+    const [primary, ...rest] = [...members].sort(
+      (a, b) => Number(a.year ?? 9999) - Number(b.year ?? 9999),
+    )
+    return rest.reduce(
+      (acc, dup) => ({
+        ...acc,
+        thumbnail: acc.thumbnail ?? dup.thumbnail,
+        isbn: acc.isbn ?? dup.isbn,
+        pageCount: acc.pageCount ?? dup.pageCount,
+      }),
+      primary,
+    )
+  })
+}
+
 export async function search(
   term: string,
   field: SearchField,
@@ -194,7 +242,8 @@ export async function search(
   if (result.total === 0 && onlySpanish) {
     result = await run(buildQuery(term, field, false), start, opts.signal)
   }
-  return { ...result, items: reorderByRelevance(result.items, term, field) }
+  const items = dedupe(reorderByRelevance(result.items, term, field))
+  return { ...result, items }
 }
 
 function descriptionOf(value: unknown): string | undefined {
