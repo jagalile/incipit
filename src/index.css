@@ -656,6 +656,12 @@ main { flex: 1; padding: 30px 0 72px; }
      anchura de la portada solo dejaba sitio para recortarlo con puntos
      suspensivos. La portada se centra dentro. */
   width: 88px;
+  /* Portada (78px) + separación (8px) + etiqueta (27px): el espacio se
+     reserva siempre, tenga o no tenga estado el libro. Sin esto, al marcar
+     un libro sin mucho texto (título corto, sin serie) esta columna pasaba
+     a ser la que decide el alto de toda la fila -antes no lo era- y la fila
+     entera saltaba hacia abajo de golpe. */
+  min-height: 113px;
   display: flex;
   flex-direction: column;
   align-items: center;
