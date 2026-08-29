@@ -109,6 +109,14 @@ function buildQuery(term: string, field: SearchField): string {
 
 function withKey(params: URLSearchParams, apiKey?: string): URLSearchParams {
   if (apiKey?.trim()) params.set('key', apiKey.trim())
+  // `country` es un parámetro documentado para saltarse la geolocalización
+  // por IP y decirle a Google directamente desde qué país se pregunta. Sin
+  // él, Google la deduce de la IP -y con redes móviles/de operador (varios
+  // usuarios reales detrás de una IP compartida, cambiando de sitio) a veces
+  // no puede, y esa deducción fallida es una causa documentada del 503
+  // intermitente. Se fija a España porque toda la app está en español; no
+  // cambia el idioma de los resultados, solo evita ese fallo concreto.
+  params.set('country', 'ES')
   return params
 }
 
