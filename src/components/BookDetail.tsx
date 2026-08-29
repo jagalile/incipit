@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CatalogError, findBookFor, getBook, refKey, type BookRef, type Provider } from '../lib/catalog'
 import { stripHtml } from '../lib/text'
-import { STATUS_META, type BookResult, type BookStatus, type SearchField, type StoredBook } from '../types'
+import type { BookResult, BookStatus, SearchField, StoredBook } from '../types'
 import type { LibraryApi } from '../hooks/useLibrary'
 import { StatusPicker } from './StatusPicker'
 import { ErrorState } from './States'
@@ -223,13 +223,13 @@ export function BookDetail({ seed, stored, library, provider, apiKey, onSearch, 
           <div className="dialog__tracking">
             <StatusPicker value={status} onChange={handleStatus} idPrefix="detail" />
 
-            {status && (
+            {/* El estado ya lo dicen los propios botones de arriba -este texto
+                era redundante-; aquí solo queda la fecha, si hay alguna. */}
+            {status && (formatDate(stored?.finishedAt) || formatDate(stored?.startedAt)) && (
               <p className="hint" style={{ marginTop: 10 }}>
-                En «{STATUS_META[status].label}»
-                {formatDate(stored?.finishedAt) && ` · terminado el ${formatDate(stored?.finishedAt)}`}
-                {!stored?.finishedAt &&
-                  formatDate(stored?.startedAt) &&
-                  ` · empezado el ${formatDate(stored?.startedAt)}`}
+                {formatDate(stored?.finishedAt)
+                  ? `Terminado el ${formatDate(stored?.finishedAt)}`
+                  : `Empezado el ${formatDate(stored?.startedAt)}`}
               </p>
             )}
 
