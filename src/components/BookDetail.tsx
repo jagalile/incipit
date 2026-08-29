@@ -215,33 +215,37 @@ export function BookDetail({ seed, stored, library, provider, apiKey, onSearch, 
                 {detail?.averageRating && <span>★ {detail.averageRating}</span>}
                 {loading && <span aria-live="polite">Cargando ficha…</span>}
               </div>
-
-              <StatusPicker value={status} onChange={handleStatus} idPrefix="detail" />
-
-              {status && (
-                <p className="hint" style={{ marginTop: 10 }}>
-                  En «{STATUS_META[status].label}»
-                  {formatDate(stored?.finishedAt) && ` · terminado el ${formatDate(stored?.finishedAt)}`}
-                  {!stored?.finishedAt &&
-                    formatDate(stored?.startedAt) &&
-                    ` · empezado el ${formatDate(stored?.startedAt)}`}
-                </p>
-              )}
-
-              {stored && (
-                <button
-                  className="link-danger"
-                  onClick={() => {
-                    if (confirm(`¿Quitar «${stored.title}» de tu biblioteca?`)) {
-                      library.remove(stored.id)
-                      onClose()
-                    }
-                  }}
-                >
-                  Quitar de mi biblioteca
-                </button>
-              )}
             </div>
+          </div>
+
+          {/* Fuera de la columna angosta de al lado de la portada: así tiene
+              todo el ancho del diálogo para caber en una sola fila. */}
+          <div className="dialog__tracking">
+            <StatusPicker compact value={status} onChange={handleStatus} idPrefix="detail" />
+
+            {status && (
+              <p className="hint" style={{ marginTop: 10 }}>
+                En «{STATUS_META[status].label}»
+                {formatDate(stored?.finishedAt) && ` · terminado el ${formatDate(stored?.finishedAt)}`}
+                {!stored?.finishedAt &&
+                  formatDate(stored?.startedAt) &&
+                  ` · empezado el ${formatDate(stored?.startedAt)}`}
+              </p>
+            )}
+
+            {stored && (
+              <button
+                className="link-danger"
+                onClick={() => {
+                  if (confirm(`¿Quitar «${stored.title}» de tu biblioteca?`)) {
+                    library.remove(stored.id)
+                    onClose()
+                  }
+                }}
+              >
+                Quitar de mi biblioteca
+              </button>
+            )}
           </div>
 
           {stored && (
