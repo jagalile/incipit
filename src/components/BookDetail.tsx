@@ -221,7 +221,7 @@ export function BookDetail({ seed, stored, library, provider, apiKey, onSearch, 
           {/* Fuera de la columna angosta de al lado de la portada: así tiene
               todo el ancho del diálogo para caber en una sola fila. */}
           <div className="dialog__tracking">
-            <StatusPicker compact value={status} onChange={handleStatus} idPrefix="detail" />
+            <StatusPicker value={status} onChange={handleStatus} idPrefix="detail" />
 
             {status && (
               <p className="hint" style={{ marginTop: 10 }}>

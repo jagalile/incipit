@@ -1136,7 +1136,10 @@ main { flex: 1; padding: 30px 0 72px; }
   display: grid;
   grid-template-columns: 104px 1fr;
   gap: 16px;
-  align-items: start;
+  /* Un título corto sin serie deja el bloque de texto más bajo que la
+     portada; centrado, ese sobrante se reparte arriba y abajo en vez de
+     quedar todo colgando debajo del texto como un hueco huérfano. */
+  align-items: center;
 }
 
 @media (min-width: 480px) {
@@ -1164,13 +1167,12 @@ main { flex: 1; padding: 30px 0 72px; }
    pequeñas-, igual que en las filas de resultados: icono solo, sin
    etiqueta de texto (un selector con 4 etiquetas como "Abandonado" no cabe
    en una línea ni con el ancho completo del diálogo en un móvil). */
-.dialog__tracking .status-picker--compact {
+/* Con etiquetas de texto, no icono-solo: a las 4 vale la pena leer qué
+   hace cada botón sin depender del title="" al pasar el ratón. En un móvil
+   sigue sin caber en una sola fila, así que usa el mismo ajuste a 2x2 que
+   ya tiene el resto de la app por debajo de 480px. */
+.dialog__tracking .status-picker {
   max-width: 420px;
-}
-
-.dialog__tracking .status-picker--compact button {
-  font-size: 20px;
-  padding: 12px 6px;
 }
 
 .dialog h2 {
