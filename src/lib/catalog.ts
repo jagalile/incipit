@@ -1,5 +1,5 @@
 import type { BookResult, SearchField } from '../types'
-import { CatalogError, type BookRef, type Provider } from './catalogCore'
+import { CatalogError, type BookRef, type ErrorKind, type Provider } from './catalogCore'
 import * as google from './googleBooks'
 import * as openLibrary from './openLibrary'
 
@@ -38,12 +38,25 @@ function impl(provider: Provider) {
   return provider === 'google' ? google : openLibrary
 }
 
+export interface SearchResult {
+  items: BookResult[]
+  total: number
+  /** Qué catálogo sirvió esto de verdad. Distinto de `opts.provider` cuando
+   *  ese falló y se recurrió al otro. */
+  usedProvider: Provider
+}
+
+// Kinds de error tras los que vale la pena probar el otro catálogo: el
+// elegido tiene un problema propio (cuota, clave, servidor caído, red), no
+// que la biblioteca esté vacía o el término no exista en ningún sitio.
+const FALLBACK_KINDS: ErrorKind[] = ['quota', 'auth', 'server', 'network']
+
 export async function searchBooks(
   term: string,
   field: SearchField,
   opts: SearchOptions,
-): Promise<{ items: BookResult[]; total: number }> {
-  if (!term.trim()) return { items: [], total: 0 }
+): Promise<SearchResult> {
+  if (!term.trim()) return { items: [], total: 0, usedProvider: opts.provider }
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     throw new CatalogError(
       'No hay conexión. Tus estantes siguen disponibles, pero la búsqueda necesita internet.',
@@ -51,7 +64,28 @@ export async function searchBooks(
       opts.provider,
     )
   }
-  return impl(opts.provider).search(term, field, opts)
+  try {
+    const result = await impl(opts.provider).search(term, field, opts)
+    return { ...result, usedProvider: opts.provider }
+  } catch (err) {
+    if ((err as Error)?.name === 'AbortError') throw err
+    const fallback: Provider = opts.provider === 'google' ? 'openlibrary' : 'google'
+    // Sin clave, Google no es una alternativa real: daría el mismo 429 de
+    // siempre, así que solo merece la pena probar si hay algo que probar.
+    const canFallback =
+      err instanceof CatalogError &&
+      FALLBACK_KINDS.includes(err.kind) &&
+      (fallback !== 'google' || Boolean(opts.apiKey?.trim()))
+    if (!canFallback) throw err
+    try {
+      const result = await impl(fallback).search(term, field, opts)
+      return { ...result, usedProvider: fallback }
+    } catch {
+      // El fallo que importa es el del catálogo que el usuario eligió, no
+      // el del recurso de emergencia que también falló.
+      throw err
+    }
+  }
 }
 
 export async function getBook(

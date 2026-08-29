@@ -53,6 +53,9 @@ export function SearchView({
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errorKind, setErrorKind] = useState<string>('server')
+  // Qué catálogo respondió de verdad: distinto de `provider` cuando el
+  // elegido falló y se recurrió al otro en su lugar.
+  const [usedProvider, setUsedProvider] = useState<Provider>(provider)
   const [attempt, setAttempt] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const query = useDebounced(term.trim())
@@ -76,10 +79,11 @@ export function SearchView({
     setLoading(true)
     setError(null)
     searchBooks(query, field, { provider, apiKey, signal: controller.signal, onlySpanish })
-      .then(({ items, total: t }) => {
+      .then(({ items, total: t, usedProvider: used }) => {
         if (controller.signal.aborted) return
         setResults(items)
         setTotal(t)
+        setUsedProvider(used)
       })
       .catch((err) => {
         if (controller.signal.aborted || err?.name === 'AbortError') return
@@ -108,8 +112,11 @@ export function SearchView({
   const loadMore = useCallback(async () => {
     setLoadingMore(true)
     try {
+      // El mismo catálogo que ya sirvió la página 1 -si esa búsqueda tuvo
+      // que recurrir al otro, seguir pidiéndole páginas al configurado
+      // volvería a fallar, y mezclar resultados de los dos sería confuso-.
       const { items } = await searchBooks(query, field, {
-        provider,
+        provider: usedProvider,
         apiKey,
         startIndex: results.length,
         onlySpanish,
@@ -123,7 +130,7 @@ export function SearchView({
     } finally {
       setLoadingMore(false)
     }
-  }, [query, field, results.length, onlySpanish, provider, apiKey])
+  }, [query, field, results.length, onlySpanish, usedProvider, apiKey])
 
   // En modo "serie" los resultados se agrupan por saga para leerlos como una colección.
   const grouped = useMemo(() => {
@@ -305,6 +312,15 @@ export function SearchView({
 
       {!loading && !error && results.length > 0 && (
         <>
+          {usedProvider !== provider && (
+            <div className="notice notice--warn" style={{ marginBottom: 16 }} role="status">
+              <span>
+                <strong>{PROVIDERS.find((p) => p.id === provider)?.label}</strong> no respondió, así
+                que estos resultados son de <strong>{PROVIDERS.find((p) => p.id === usedProvider)?.label}</strong>{' '}
+                en su lugar.
+              </span>
+            </div>
+          )}
           <p className="hint" style={{ marginBottom: 16 }} aria-live="polite">
             {results.length} de {plural(total, 'resultado', 'resultados')}
             {field === 'serie' && grouped
