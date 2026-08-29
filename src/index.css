@@ -735,10 +735,21 @@ main { flex: 1; padding: 30px 0 72px; }
   white-space: nowrap;
 }
 
-/* Fecha (o serie), páginas e ISBN, todo en una línea. */
 /* Dos líneas posibles: año/serie y, debajo, páginas/ISBN. La primera se
    separa un poco del autor (son datos, no prosa); la segunda queda pegada
-   a la primera, sin otro salto — juntas leen como un mismo bloque. */
+   a la primera, sin otro salto — juntas leen como un mismo bloque. Mismo
+   color que en la cuadrícula: año/serie en naranja, el resto en gris. */
+.book-row__series {
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--accent-ink);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 4px 0 0;
+}
+
 .book-row__meta {
   font-size: 11px;
   line-height: 1.25;
@@ -750,7 +761,7 @@ main { flex: 1; padding: 30px 0 72px; }
   margin: 4px 0 0;
 }
 
-.book-row__meta + .book-row__meta {
+.book-row__series + .book-row__meta {
   margin-top: 0;
 }
 

@@ -76,7 +76,7 @@ export function BookRow({
         <button type="button" className="book-row__body" onClick={onOpen}>
           <h3 className="book-row__title">{title}</h3>
           <p className="book-row__author">{author}</p>
-          {dateAndSeries && <p className="book-row__meta">{dateAndSeries}</p>}
+          {dateAndSeries && <p className="book-row__series">{dateAndSeries}</p>}
           {bibliographic && <p className="book-row__meta">{bibliographic}</p>}
           {!!rating && (
             <p className="card__rating" aria-label={`${rating} de 5 estrellas`}>
