@@ -672,7 +672,7 @@ main { flex: 1; padding: 30px 0 72px; }
 .book-row__body {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
   text-align: left;
   border: 0;
   background: transparent;
@@ -706,6 +706,8 @@ main { flex: 1; padding: 30px 0 72px; }
   text-overflow: ellipsis;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  /* Un poco más separada del bloque título/autor: son datos, no prosa. */
+  margin-top: 4px;
 }
 
 .book-row__badge {
@@ -728,7 +730,7 @@ main { flex: 1; padding: 30px 0 72px; }
 
 .book-row__actions .status-picker--compact button {
   font-size: 15px;
-  padding: 6px 6px;
+  padding: 4px 6px;
 }
 
 .book-row__remove {
