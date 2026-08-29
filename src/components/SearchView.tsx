@@ -272,7 +272,7 @@ export function SearchView({
               Está tardando más de lo normal — puede que el servidor esté ocupado. Reintentando…
             </p>
           )}
-          <CardsSkeleton />
+          <CardsSkeleton view={view} />
         </>
       )}
 

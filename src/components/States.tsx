@@ -51,11 +51,33 @@ export function ErrorState({
   )
 }
 
-/** Rejilla de esqueletos con la misma silueta que las tarjetas reales. */
-export function CardsSkeleton({ count = 12 }: { count?: number }) {
+/** Esqueletos con la misma silueta que los resultados reales: en cuadrícula
+ *  o en fila, según qué vista esté activa -si no, el destello de carga
+ *  anticipa una forma que el resultado real nunca tiene. */
+export function CardsSkeleton({ count, view = 'grid' }: { count?: number; view?: 'grid' | 'list' }) {
+  if (view === 'list') {
+    return (
+      <div className="list" aria-busy="true" aria-label="Cargando libros">
+        {Array.from({ length: count ?? 6 }, (_, i) => (
+          <div className="book-row" key={i}>
+            <div className="book-row__coverwrap">
+              <div className="skeleton skeleton--cover book-row__cover" />
+            </div>
+            <div className="book-row__right">
+              <div className="book-row__body">
+                <div className="skeleton skeleton--line" style={{ width: '70%', height: 14, marginBottom: 8 }} />
+                <div className="skeleton skeleton--line short" />
+              </div>
+              <div className="skeleton" style={{ height: 31, borderRadius: 999 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
   return (
     <div className="grid" aria-busy="true" aria-label="Cargando libros">
-      {Array.from({ length: count }, (_, i) => (
+      {Array.from({ length: count ?? 12 }, (_, i) => (
         <div className="card" key={i}>
           <div className="skeleton skeleton--cover" />
           <div className="card__body">
