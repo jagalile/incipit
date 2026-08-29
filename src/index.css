@@ -867,8 +867,12 @@ main { flex: 1; padding: 30px 0 72px; }
 
 /* "Abandonado" es una sola palabra: sin espacio donde partir, un flex box
    que se encoge por debajo de su ancho natural la deja sobresalir del
-   pill en vez de ajustarla. En vez de encogerla, se pasa a dos columnas. */
-@media (max-width: 480px) {
+   pill en vez de ajustarla. En vez de encogerla, se pasa a dos columnas.
+   550px, no 480px: es el único uso que queda de la versión con etiquetas
+   (la ficha; cuadrícula y filas ya usan la compacta), y medido en el propio
+   navegador, "Abandonado" con su icono necesita 116px por botón y no cabe
+   en 4 columnas hasta los ~540px reales de ancho disponible. */
+@media (max-width: 550px) {
   .status-picker:not(.status-picker--compact) {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1169,17 +1173,16 @@ main { flex: 1; padding: 30px 0 72px; }
 
 .dialog__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* El selector de estado vive fuera de esa columna angosta -a todo el ancho
-   del diálogo, para que quepa en una sola fila incluso en pantallas
-   pequeñas-, igual que en las filas de resultados: icono solo, sin
-   etiqueta de texto (un selector con 4 etiquetas como "Abandonado" no cabe
-   en una línea ni con el ancho completo del diálogo en un móvil). */
-/* Con etiquetas de texto, no icono-solo: a las 4 vale la pena leer qué
-   hace cada botón sin depender del title="" al pasar el ratón. En un móvil
-   sigue sin caber en una sola fila, así que usa el mismo ajuste a 2x2 que
-   ya tiene el resto de la app por debajo de 480px. */
+/* El selector de estado vive fuera de esa columna angosta, a todo el ancho
+   del diálogo, para que tenga sitio de sobra donde acomodarse.
+   Con etiquetas de texto: a las 4 vale la pena leer qué hace cada botón
+   sin depender del title="" al pasar el ratón. Por debajo de 550px de
+   ancho de pantalla sigue sin caber en una sola fila (ver la media query
+   de arriba) y usa 2x2; a partir de ahí, con el hueco del botón de cerrar
+   ya recuperado, sí entra en una línea -el tope de 600px es solo para que
+   en un diálogo muy ancho los botones no se estiren de más-. */
 .dialog__tracking .status-picker {
-  max-width: 420px;
+  max-width: 600px;
 }
 
 .dialog h2 {
