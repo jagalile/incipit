@@ -27,6 +27,7 @@ interface Props {
 
 export function SettingsView({ library, settings, onSettings, install }: Props) {
   const [strategy, setStrategy] = useState<Strategy>('merge')
+  const [showKey, setShowKey] = useState(false)
   const [busy, setBusy] = useState<null | 'csv' | 'rss' | 'enrich'>(null)
   const [step, setStep] = useState('')
   const [progress, setProgress] = useState(0)
@@ -219,15 +220,55 @@ export function SettingsView({ library, settings, onSettings, install }: Props) 
               <label className="label" htmlFor="gb-key">
                 Clave de API de Google Books
               </label>
-              <input
-                id="gb-key"
-                className="input"
-                type="password"
-                placeholder="AIza…"
-                autoComplete="off"
-                value={settings.googleApiKey}
-                onChange={(e) => onSettings({ googleApiKey: e.target.value })}
-              />
+              <div className="key-field">
+                <input
+                  id="gb-key"
+                  className="input"
+                  type={showKey ? 'text' : 'password'}
+                  placeholder="AIza…"
+                  autoComplete="off"
+                  value={settings.googleApiKey}
+                  onChange={(e) => onSettings({ googleApiKey: e.target.value })}
+                />
+                <button
+                  type="button"
+                  className="key-field__toggle"
+                  onClick={() => setShowKey((v) => !v)}
+                  aria-label={showKey ? 'Ocultar la clave' : 'Mostrar la clave'}
+                  title={showKey ? 'Ocultar la clave' : 'Mostrar la clave'}
+                >
+                  {showKey ? (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path
+                        d="M1 8s2.7-5 7-5 7 5 7 5-2.7 5-7 5-7-5-7-5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.4" />
+                      <line
+                        x1="1.5"
+                        y1="1.5"
+                        x2="14.5"
+                        y2="14.5"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path
+                        d="M1 8s2.7-5 7-5 7 5 7 5-2.7 5-7 5-7-5-7-5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.4" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               <p className="hint">
                 Se crea gratis en{' '}
                 <a
