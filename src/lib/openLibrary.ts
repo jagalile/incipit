@@ -148,6 +148,33 @@ async function run(
   }
 }
 
+function normalizeForMatch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+/**
+ * Open Library indexa el subtítulo dentro del propio campo `title`: una
+ * búsqueda de "juramentada" no solo encuentra el libro que se llama así, sino
+ * cualquier tratado jurídico cuyo subtítulo diga "la guerra juramentada
+ * contra el infiel". No se ocultan esos resultados (siguen siendo del
+ * catálogo), pero se ordenan detrás de los que sí coinciden en el campo por
+ * el que se está buscando.
+ */
+function reorderByRelevance(items: BookResult[], term: string, field: SearchField): BookResult[] {
+  const needle = normalizeForMatch(term)
+  const relevant = (item: BookResult) => {
+    const haystack = normalizeForMatch(
+      field === 'autor' ? item.authors.join(' ') : field === 'serie' ? (item.series ?? '') : item.title,
+    )
+    return haystack.includes(needle)
+  }
+  // Sort estable: dentro de cada grupo se conserva el orden que ya trae Open Library.
+  return [...items].sort((a, b) => Number(relevant(b)) - Number(relevant(a)))
+}
+
 export async function search(
   term: string,
   field: SearchField,
@@ -155,19 +182,19 @@ export async function search(
 ): Promise<{ items: BookResult[]; total: number }> {
   const onlySpanish = opts.onlySpanish !== false
   const start = opts.startIndex ?? 0
-  const first = await run(buildQuery(term, field, onlySpanish), start, opts.signal)
+  let result = await run(buildQuery(term, field, onlySpanish), start, opts.signal)
 
   // El campo `series` de Open Library está poco poblado: si no da nada, se busca
   // el nombre de la saga en los títulos, que es donde suele aparecer.
-  if (field === 'serie' && first.total === 0) {
-    return run(buildQuery(term, 'titulo', onlySpanish), start, opts.signal)
+  if (field === 'serie' && result.total === 0) {
+    result = await run(buildQuery(term, 'titulo', onlySpanish), start, opts.signal)
   }
   // Una búsqueda en español sin resultados casi siempre significa que la obra no
   // tiene edición traducida catalogada, no que no exista.
-  if (first.total === 0 && onlySpanish) {
-    return run(buildQuery(term, field, false), start, opts.signal)
+  if (result.total === 0 && onlySpanish) {
+    result = await run(buildQuery(term, field, false), start, opts.signal)
   }
-  return first
+  return { ...result, items: reorderByRelevance(result.items, term, field) }
 }
 
 function descriptionOf(value: unknown): string | undefined {

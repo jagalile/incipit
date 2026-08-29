@@ -607,6 +607,17 @@ main { flex: 1; padding: 30px 0 72px; }
 .status-picker--compact button span { display: none; }
 .status-picker--compact button { font-size: 13px; padding: 7px 4px; }
 
+/* La variante con icono y texto (en la ficha) puede ocupar dos filas en
+   móvil: un radio de 999px sobre un contenedor de esa altura no da una
+   píldora, da una cápsula deforme. Un radio moderado se ve bien tenga
+   una fila (escritorio) o dos (móvil). */
+.status-picker:not(.status-picker--compact) {
+  border-radius: var(--radius);
+}
+.status-picker:not(.status-picker--compact) button {
+  border-radius: var(--radius-sm);
+}
+
 /* "Abandonado" es una sola palabra: sin espacio donde partir, un flex box
    que se encoge por debajo de su ancho natural la deja sobresalir del
    pill en vez de ajustarla. En vez de encogerla, se pasa a dos columnas. */
