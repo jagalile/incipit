@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CatalogError, PROVIDERS, getExcerpt, refKey, searchBooks, type Provider } from '../lib/catalog'
+import { CatalogError, PROVIDERS, refKey, searchBooks, type Provider } from '../lib/catalog'
 import { seriesKey } from '../lib/series'
-import { stripHtml, truncate } from '../lib/text'
 import type { BookResult, SearchField } from '../types'
 import type { LibraryApi } from '../hooks/useLibrary'
 import { useDebounced } from '../hooks/useDebounced'
@@ -63,40 +62,6 @@ export function SearchView({
     setField(pendingQuery.field)
     onConsumePending?.()
   }, [pendingQuery, onConsumePending])
-
-  // Sinopsis para la vista de filas. Google Books ya la trae en la propia
-  // búsqueda; Open Library no, así que hay que pedirla aparte — pero solo
-  // mientras se está viendo en filas, y con un tope de peticiones a la vez
-  // para no lanzar 24 de golpe contra la API.
-  const [excerpts, setExcerpts] = useState<Record<string, string | null>>({})
-  useEffect(() => {
-    if (view !== 'list') return
-    const pending = results.filter(
-      (b) => b.ref.provider === 'openlibrary' && !b.description && !(refKey(b.ref) in excerpts),
-    )
-    if (!pending.length) return
-    let cancelled = false
-    const CONCURRENCY = 3
-    let cursor = 0
-    const worker = async () => {
-      while (!cancelled && cursor < pending.length) {
-        const book = pending[cursor++]
-        let value: string | null = null
-        try {
-          const desc = await getExcerpt(book.ref)
-          value = desc ? truncate(stripHtml(desc)) : null
-        } catch {
-          value = null
-        }
-        if (!cancelled) setExcerpts((prev) => ({ ...prev, [refKey(book.ref)]: value }))
-      }
-    }
-    Promise.all(Array.from({ length: CONCURRENCY }, worker)).catch(() => {})
-    return () => {
-      cancelled = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, results])
 
   useEffect(() => {
     if (!query) {
@@ -171,49 +136,15 @@ export function SearchView({
 
   const renderCard = (book: BookResult) => {
     const key = refKey(book.ref)
+    const Item = view === 'grid' ? BookCard : BookRow
     const removeFromLibrary = library.statusOf(book.ref)
       ? () => {
           const stored = library.books.find((b) => refKey(b.ref) === key)
           if (stored) library.remove(stored.id)
         }
       : undefined
-    const footer = (
-      <StatusPicker
-        compact={view === 'grid'}
-        idPrefix={key}
-        value={library.statusOf(book.ref)}
-        onChange={(status) => library.addFromSearch(book, status)}
-      />
-    )
-
-    if (view === 'grid') {
-      return (
-        <BookCard
-          key={key}
-          title={book.title}
-          authors={book.authors}
-          thumbnail={book.thumbnail}
-          series={book.series}
-          seriesPosition={book.seriesPosition}
-          year={book.year}
-          pageCount={book.pageCount}
-          isbn={book.isbn}
-          status={library.statusOf(book.ref)}
-          onOpen={() => onOpen(book)}
-          onRemove={removeFromLibrary}
-          footer={footer}
-        />
-      )
-    }
-
-    // Google ya trae la sinopsis en la propia búsqueda; para Open Library se
-    // resuelve aparte y llega vía `excerpts`. Ausente de ese registro = aún sin
-    // pedir; `null` = ya se pidió y no había sinopsis (distinto de "cargando").
-    const resolved = key in excerpts ? excerpts[key] : undefined
-    const excerpt = book.description ? truncate(stripHtml(book.description)) : (resolved ?? undefined)
-    const stillLoading = !book.description && book.ref.provider === 'openlibrary' && !(key in excerpts)
     return (
-      <BookRow
+      <Item
         key={key}
         title={book.title}
         authors={book.authors}
@@ -224,11 +155,16 @@ export function SearchView({
         pageCount={book.pageCount}
         isbn={book.isbn}
         status={library.statusOf(book.ref)}
-        description={excerpt}
-        descriptionLoading={stillLoading}
         onOpen={() => onOpen(book)}
         onRemove={removeFromLibrary}
-        footer={footer}
+        footer={
+          <StatusPicker
+            compact
+            idPrefix={key}
+            value={library.statusOf(book.ref)}
+            onChange={(status) => library.addFromSearch(book, status)}
+          />
+        }
       />
     )
   }

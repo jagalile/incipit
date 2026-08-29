@@ -21,11 +21,3 @@ export function stripHtml(text: string): string {
     .replace(/\s+/g, ' ')
     .trim()
 }
-
-/** Recorta por palabra completa, sin partir una a la mitad. */
-export function truncate(text: string, max = 170): string {
-  if (text.length <= max) return text
-  const cut = text.slice(0, max)
-  const lastSpace = cut.lastIndexOf(' ')
-  return `${cut.slice(0, lastSpace > 40 ? lastSpace : max)}…`
-}
