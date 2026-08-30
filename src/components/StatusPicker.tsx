@@ -1,4 +1,5 @@
 import { STATUSES, STATUS_META, type BookStatus } from '../types'
+import { StatusIcon } from './StatusIcon'
 
 interface Props {
   value?: BookStatus
@@ -28,9 +29,7 @@ export function StatusPicker({ value, onChange, compact, idPrefix }: Props) {
               onChange(status)
             }}
           >
-            <em style={{ fontStyle: 'normal' }} aria-hidden="true">
-              {meta.icon}
-            </em>
+            <StatusIcon status={status} size={compact ? 15 : 13} />
             <span>{meta.short}</span>
           </button>
         )

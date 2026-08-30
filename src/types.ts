@@ -4,32 +4,27 @@ export type BookStatus = 'pendiente' | 'leyendo' | 'leido' | 'cancelado'
 
 export const STATUSES: BookStatus[] = ['leyendo', 'pendiente', 'leido', 'cancelado']
 
-export const STATUS_META: Record<
-  BookStatus,
-  { label: string; short: string; icon: string; description: string }
-> = {
+/** El icono de cada estado vive en <StatusIcon> (component/SVG), no aquí:
+ *  este archivo no es .tsx y no puede llevar JSX. */
+export const STATUS_META: Record<BookStatus, { label: string; short: string; description: string }> = {
   leyendo: {
     label: 'Leyendo',
     short: 'Leyendo',
-    icon: '▶',
     description: 'Lecturas en curso ahora mismo.',
   },
   pendiente: {
     label: 'Pendientes',
     short: 'Pendiente',
-    icon: '⚑',
     description: 'Libros que quieres leer más adelante.',
   },
   leido: {
     label: 'Leídos',
     short: 'Leído',
-    icon: '✓',
     description: 'Lecturas terminadas.',
   },
   cancelado: {
     label: 'Abandonados',
     short: 'Abandonado',
-    icon: '✕',
     description: 'Los que decidiste no terminar.',
   },
 }

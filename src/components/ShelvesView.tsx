@@ -5,6 +5,7 @@ import { plural } from '../lib/plural'
 import { BookCard } from './BookCard'
 import { BookRow } from './BookRow'
 import { SearchIcon } from './SearchIcon'
+import { StatusIcon } from './StatusIcon'
 import { StatusPicker } from './StatusPicker'
 import { EmptyState } from './States'
 import { ViewToggle, type ResultsView } from './ViewToggle'
@@ -215,7 +216,7 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
             />
           ) : (
             <EmptyState
-              icon={meta.icon}
+              icon={<StatusIcon status={openShelf} size={30} />}
               title={`Nada en «${meta.label}»`}
               description={
                 openShelf === 'leyendo'
@@ -260,7 +261,7 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
         {readingNow.length === 0 ? (
           <EmptyState
             inline
-            icon={STATUS_META.leyendo.icon}
+            icon={<StatusIcon status="leyendo" size={30} />}
             title="Nada en marcha"
             description="Cuando empieces un libro, márcalo como «Leyendo» para tenerlo aquí a mano."
           />
@@ -277,8 +278,8 @@ export function ShelvesView({ library, onOpen, onGoToSearch, onGoToGoodreads }: 
             className="shelf-tile"
             onClick={() => openShelfView(status)}
           >
-            <span className={`shelf-tile__icon badge--${status}`} aria-hidden="true">
-              {STATUS_META[status].icon}
+            <span className={`shelf-tile__icon badge--${status}`}>
+              <StatusIcon status={status} size={17} />
             </span>
             <span className="shelf-tile__count">{library.byStatus[status].length}</span>
             <span className="shelf-tile__label">{STATUS_META[status].label}</span>

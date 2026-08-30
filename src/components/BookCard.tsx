@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { STATUS_META, type BookStatus } from '../types'
+import { StatusIcon } from './StatusIcon'
 
 interface Props {
   title: string
@@ -98,9 +99,7 @@ export function BookCard({
         )}
         {status && (
           <span className={`card__badge badge--${status}`}>
-            <em style={{ fontStyle: 'normal' }} aria-hidden="true">
-              {STATUS_META[status].icon}
-            </em>
+            <StatusIcon status={status} size={12} />
             {STATUS_META[status].short}
           </span>
         )}
