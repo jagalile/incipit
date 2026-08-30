@@ -66,6 +66,51 @@ export function useEnrichment(library: LibraryApi, settings: Settings): EnrichAp
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [state.status])
 
+  // Evita que el bloqueo automático por inactividad corte el proceso a
+  // media búsqueda: mientras corre, se pide que la pantalla no se apague.
+  // No cubre que el usuario cambie de app a mano ni un bloqueo manual con
+  // el botón físico -eso lo decide el sistema, no esta API-, pero sí el
+  // caso más habitual: el móvil se bloquea solo mientras esperas.
+  useEffect(() => {
+    if (state.status !== 'running') return
+    let sentinel: WakeLockSentinel | null = null
+    let cancelled = false
+
+    const acquire = async () => {
+      if (!('wakeLock' in navigator)) return
+      try {
+        const lock = await navigator.wakeLock.request('screen')
+        if (cancelled) {
+          // El proceso ya terminó (o se canceló) mientras se pedía el permiso.
+          lock.release().catch(() => {})
+          return
+        }
+        sentinel = lock
+        // El propio navegador libera el bloqueo al ocultar la pestaña -no hay
+        // forma de evitarlo-; se vuelve a pedir en cuanto se recupera el foco.
+        sentinel.addEventListener('release', () => {
+          if (sentinel === lock) sentinel = null
+        })
+      } catch {
+        // Puede rechazarlo por ahorro de batería o por no tener foco: sin
+        // bloqueo de pantalla, pero el proceso sigue igual.
+      }
+    }
+
+    acquire()
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && !sentinel) acquire()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisibility)
+      sentinel?.release().catch(() => {})
+      sentinel = null
+    }
+  }, [state.status])
+
   useEffect(() => () => clearTimeout(dismissTimerRef.current), [])
 
   const dismiss = useCallback(() => {
