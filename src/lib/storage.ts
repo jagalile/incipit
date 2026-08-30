@@ -46,9 +46,20 @@ export function loadLibrary(): StoredBook[] {
 
 /** Las primeras versiones guardaban `volumeId` porque Google Books era la única fuente. */
 function migrate(book: StoredBook & { volumeId?: string }): StoredBook {
-  if (book.ref || !book.volumeId) return book
-  const { volumeId, ...rest } = book
-  return { ...rest, ref: { provider: 'google', id: volumeId } }
+  let next = book
+  if (!next.ref && next.volumeId) {
+    const { volumeId, ...rest } = next
+    next = { ...rest, ref: { provider: 'google', id: volumeId } }
+  }
+  // `source` marcaba "de búsqueda" con el valor 'google' porque antes ese
+  // era el único catálogo -desde que Open Library es el proveedor por
+  // defecto, ese valor mentía sobre el origen real más a menudo que decía
+  // la verdad-. El cast es porque JSON.parse no sabe que ese valor legado ya
+  // no existe en el tipo actual.
+  if ((next.source as string) === 'google') {
+    next = { ...next, source: 'busqueda' }
+  }
+  return next
 }
 
 export function saveLibrary(books: StoredBook[]): boolean {

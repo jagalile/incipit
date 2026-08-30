@@ -86,7 +86,7 @@ export function useLibrary(): LibraryApi {
         rating: 0,
         addedAt: now,
         updatedAt: now,
-        source: 'google',
+        source: 'busqueda',
         ...datesFor(status, undefined),
       }
       return [book, ...prev]

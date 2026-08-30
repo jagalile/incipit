@@ -35,9 +35,10 @@ export const STATUS_META: Record<
 }
 
 /**
- * Lo que se guarda en localStorage. Es deliberadamente ligero: el identificador
- * de Google Books (`volumeId`) basta para recuperar la ficha completa bajo demanda;
- * el resto son los mínimos para pintar los estantes sin red.
+ * Lo que se guarda en localStorage. Es deliberadamente ligero: `ref` (el
+ * puntero al catálogo -Google Books u Open Library, el que sea-) basta para
+ * recuperar la ficha completa bajo demanda; el resto son los mínimos para
+ * pintar los estantes sin red.
  */
 export interface StoredBook {
   /** Clave interna estable: `<proveedor>:<id>`, o `gr:<goodreadsId>` si aún no hay match. */
@@ -61,7 +62,10 @@ export interface StoredBook {
   updatedAt: string
   startedAt?: string
   finishedAt?: string
-  source: 'google' | 'goodreads' | 'manual'
+  /** Cómo entró el libro a la biblioteca -no de qué catálogo salen sus datos
+   *  ahora mismo, eso ya lo dice `ref.provider` y puede cambiar si se
+   *  reenlaza con otro proveedor-. */
+  source: 'busqueda' | 'goodreads' | 'manual'
 }
 
 /** Resultado normalizado de una búsqueda, venga del catálogo que venga. */
