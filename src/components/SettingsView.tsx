@@ -336,6 +336,14 @@ export function SettingsView({ library, settings, onSettings, install, enrich }:
                 onChange={(e) => onSettings({ goodreadsUserId: e.target.value })}
               />
               <p className="hint">
+                Abre{' '}
+                <a href="https://www.goodreads.com" target="_blank" rel="noreferrer">
+                  goodreads.com
+                </a>{' '}
+                y entra en tu perfil (el icono de arriba a la derecha) -este enlace se abre en el
+                navegador, no dentro de la app instalada, para que puedas ver la dirección completa-.
+              </p>
+              <p className="hint">
                 Está en la URL de tu perfil: goodreads.com/user/show/<strong>12345678</strong>-nombre
               </p>
             </div>
