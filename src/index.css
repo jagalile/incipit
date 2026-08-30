@@ -309,11 +309,6 @@ main { flex: 1; padding: 30px 0 72px; }
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--paper-2);
-  /* iOS hace zoom automático al enfocar un campo con letra por debajo de
-     16px: a este tamaño ya no hace falta -y no toca el zoom manual del
-     usuario en el resto de la app, al contrario que desactivarlo del todo
-     por el viewport-. */
-  font-size: 16px;
   transition: border-color 0.16s, box-shadow 0.16s;
 }
 
@@ -388,8 +383,7 @@ main { flex: 1; padding: 30px 0 72px; }
   background: var(--paper-2);
   border-radius: 999px;
   padding: 8px 12px;
-  /* Un <select> también dispara el zoom automático de iOS por debajo de 16px. */
-  font-size: 16px;
+  font-size: 13px;
   color: var(--ink-2);
 }
 
@@ -1227,7 +1221,6 @@ main { flex: 1; padding: 30px 0 72px; }
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   background: var(--paper);
-  font-size: 16px;
   transition: border-color 0.16s, box-shadow 0.16s;
 }
 
@@ -1482,7 +1475,6 @@ main { flex: 1; padding: 30px 0 72px; }
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   background: var(--paper);
-  font-size: 16px;
   line-height: 1.55;
 }
 
