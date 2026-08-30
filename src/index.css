@@ -128,6 +128,9 @@ a { color: var(--accent-ink); }
   align-items: center;
   gap: 18px;
   height: 62px;
+  /* Un poco más que el resto del contenido: pegado al borde del todo, el
+     título y los botones de los extremos quedaban muy justos. */
+  padding: 0 10px;
 }
 
 .brand {
@@ -1539,7 +1542,7 @@ main { flex: 1; padding: 30px 0 72px; }
 
 /* =========================================================== responsive == */
 @media (max-width: 720px) {
-  .header__inner { height: auto; padding: 11px 0; flex-wrap: wrap; gap: 10px; }
+  .header__inner { height: auto; padding: 11px 10px; flex-wrap: wrap; gap: 10px; }
   .brand { font-size: 20px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 18px 13px; }
   .shelf__desc { display: none; }

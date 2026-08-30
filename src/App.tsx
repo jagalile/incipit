@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PROVIDERS, refKey } from './lib/catalog'
 import type { SearchField } from './types'
 import { plural } from './lib/plural'
@@ -43,6 +43,14 @@ export default function App() {
   const enrich = useEnrichment(library, settings)
   const [detail, setDetail] = useState<(DetailSeed & { id?: string }) | null>(null)
   const [pendingSearch, setPendingSearch] = useState<{ term: string; field: SearchField } | null>(null)
+
+  // Adónde vuelve el botón de ajustes al cerrarse: la última pestaña de
+  // contenido visitada, sea cual sea el camino por el que se entró a
+  // ajustes (el propio botón, o "importar de Goodreads" desde otra vista).
+  const previousTabRef = useRef<Exclude<Tab, 'ajustes'>>('estantes')
+  useEffect(() => {
+    if (tab !== 'ajustes') previousTabRef.current = tab
+  }, [tab])
 
   /** Pulsar el autor o la serie en una ficha lleva a la pestaña Buscar con esa consulta lista. */
   const goSearch = useCallback((term: string, field: SearchField) => {
@@ -105,11 +113,11 @@ export default function App() {
           <button
             className="icon-btn"
             aria-pressed={tab === 'ajustes'}
-            onClick={() => setTab('ajustes')}
-            aria-label="Ajustes"
-            title="Ajustes"
+            onClick={() => setTab(tab === 'ajustes' ? previousTabRef.current : 'ajustes')}
+            aria-label={tab === 'ajustes' ? 'Cerrar ajustes' : 'Ajustes'}
+            title={tab === 'ajustes' ? 'Cerrar ajustes' : 'Ajustes'}
           >
-            ⚙
+            {tab === 'ajustes' ? '×' : '⚙'}
           </button>
         </div>
       </header>
