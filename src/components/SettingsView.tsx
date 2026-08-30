@@ -421,10 +421,10 @@ export function SettingsView({ library, settings, onSettings, install, enrich }:
               <p className="label">Completar fichas</p>
               <p className="hint" style={{ margin: '0 0 10px' }}>
                 {enrich.status === 'done'
-                  ? `${enrich.cancelled ? 'Cancelado: ' : ''}${enrich.matched} de ${enrich.done} ${enrich.done === 1 ? 'libro enlazado' : 'libros enlazados'} con ${enrich.providerLabel}.`
+                  ? `${enrich.cancelled ? 'Cancelado: ' : ''}${enrich.matched} de ${enrich.done} ${enrich.done === 1 ? 'libro enlazado' : 'libros enlazados'}.`
                   : enrich.pendingCount
                     ? `${plural(enrich.pendingCount, 'libro importado aún no tiene', 'libros importados aún no tienen')} portada ni ficha.`
-                    : `Todos tus libros están enlazados con ${provider.label}.`}
+                    : 'Todos tus libros están enlazados con su ficha del catálogo.'}
               </p>
               {enrich.status === 'running' ? (
                 <div className="row" style={{ marginTop: 0 }}>

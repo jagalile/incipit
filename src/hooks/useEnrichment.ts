@@ -12,7 +12,6 @@ export interface EnrichState {
   total: number
   matched: number
   cancelled: boolean
-  providerLabel: string
 }
 
 export interface EnrichApi extends EnrichState {
@@ -30,7 +29,6 @@ const IDLE: EnrichState = {
   total: 0,
   matched: 0,
   cancelled: false,
-  providerLabel: '',
 }
 
 /**
@@ -76,7 +74,7 @@ export function useEnrichment(library: LibraryApi, settings: Settings): EnrichAp
   }, [])
 
   const start = useCallback(() => {
-    const { library, settings, pending, providerMeta, needsKey } = latestRef.current
+    const { library, settings, pending, needsKey } = latestRef.current
     if (runningRef.current || pending.length === 0 || needsKey) return
     runningRef.current = true
     clearTimeout(dismissTimerRef.current)
@@ -85,15 +83,7 @@ export function useEnrichment(library: LibraryApi, settings: Settings): EnrichAp
     controllerRef.current = controller
     const batch: StoredBook[] = pending
     const total = batch.length
-    setState({
-      status: 'running',
-      progress: 0,
-      done: 0,
-      total,
-      matched: 0,
-      cancelled: false,
-      providerLabel: providerMeta.label,
-    })
+    setState({ status: 'running', progress: 0, done: 0, total, matched: 0, cancelled: false })
 
     ;(async () => {
       let done = 0

@@ -27,8 +27,7 @@ export function EnrichStatus({ enrich }: { enrich: EnrichApi }) {
             <span aria-hidden="true">{enrich.cancelled ? '⚠' : '✓'}</span>
             <span className="enrich-status__text">
               {enrich.cancelled ? 'Cancelado: ' : ''}
-              {enrich.matched} de {enrich.done} {enrich.done === 1 ? 'libro enlazado' : 'libros enlazados'} con{' '}
-              {enrich.providerLabel}.
+              {enrich.matched} de {enrich.done} {enrich.done === 1 ? 'libro enlazado' : 'libros enlazados'}.
             </span>
             <button
               type="button"
