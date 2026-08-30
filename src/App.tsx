@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PROVIDERS, refKey } from './lib/catalog'
 import type { SearchField } from './types'
 import { plural } from './lib/plural'
+import { useEnrichment } from './hooks/useEnrichment'
 import { useInstall } from './hooks/useInstall'
 import { useLibrary } from './hooks/useLibrary'
 import { loadSettings, saveSettings } from './lib/storage'
 import type { Settings } from './types'
 import { BookDetail, type DetailSeed } from './components/BookDetail'
+import { EnrichStatus } from './components/EnrichStatus'
 import { SettingsView } from './components/SettingsView'
 import { SearchView } from './components/SearchView'
 import { ShelfIcon } from './components/ShelfIcon'
@@ -38,6 +40,7 @@ export default function App() {
   const install = useInstall()
   const [tab, setTab] = useState<Tab>(initialTab)
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
+  const enrich = useEnrichment(library, settings)
   const [detail, setDetail] = useState<(DetailSeed & { id?: string }) | null>(null)
   const [pendingSearch, setPendingSearch] = useState<{ term: string; field: SearchField } | null>(null)
 
@@ -148,6 +151,7 @@ export default function App() {
               settings={settings}
               onSettings={updateSettings}
               install={install}
+              enrich={enrich}
             />
           )}
         </div>
@@ -173,16 +177,19 @@ export default function App() {
         </div>
       </footer>
 
-      <nav className="bottom-nav" aria-label="Secciones">
-        <div className="bottom-nav__inner">
-          {NAV_TABS.map((t) => (
-            <button key={t.id} aria-current={tab === t.id} onClick={() => setTab(t.id)}>
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </nav>
+      <div className="app-bottom-stack">
+        <EnrichStatus enrich={enrich} />
+        <nav className="bottom-nav" aria-label="Secciones">
+          <div className="bottom-nav__inner">
+            {NAV_TABS.map((t) => (
+              <button key={t.id} aria-current={tab === t.id} onClick={() => setTab(t.id)}>
+                {t.icon}
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </nav>
+      </div>
 
       {detail && (
         <BookDetail

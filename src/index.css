@@ -161,10 +161,19 @@ a { color: var(--accent-ink); }
 /* Estantes/Buscar viven aquí abajo, fijas, en vez de en la cabecera: son las
    dos secciones de contenido -Ajustes no, por eso se queda arriba junto al
    selector de tema-. */
-.bottom-nav {
+/* Envuelve la barra de navegación y, cuando la hay, la franja de progreso de
+   encima: así esta última se apila justo encima de la barra sin tener que
+   saber su altura exacta -y ambas quedan fijas al fondo de la pantalla en
+   cualquier pestaña-. */
+.app-bottom-stack {
   position: fixed;
   inset: auto 0 0 0;
   z-index: 40;
+  display: flex;
+  flex-direction: column;
+}
+
+.bottom-nav {
   display: flex;
   justify-content: center;
   background: color-mix(in srgb, var(--paper) 92%, transparent);
@@ -203,6 +212,42 @@ a { color: var(--accent-ink); }
   color: var(--accent-ink);
   background: var(--accent-soft);
 }
+
+/* ====================================================== enrich-status ==== */
+/* Progreso de "Buscar portadas y fichas", visible en cualquier pestaña; al
+   terminar se convierte en el mismo hueco en un resumen que se cierra solo. */
+.enrich-status {
+  background: var(--paper-2);
+  border-top: 1px solid var(--line);
+  padding: 10px 16px;
+}
+
+.enrich-status__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.enrich-status__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.enrich-status__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.enrich-status__dismiss {
+  width: 26px;
+  height: 26px;
+  font-size: 15px;
+  flex: none;
+}
+
+.enrich-status .progress { margin-top: 0; }
 
 .icon-btn {
   width: 34px; height: 34px;

@@ -9,10 +9,11 @@ import {
   type GoodreadsEntry,
   type MergeResult,
 } from '../lib/goodreads'
-import { PROVIDERS, findBookFor } from '../lib/catalog'
+import { PROVIDERS } from '../lib/catalog'
 import { exportLibrary } from '../lib/storage'
 import { plural } from '../lib/plural'
 import type { Settings } from '../types'
+import type { EnrichApi } from '../hooks/useEnrichment'
 import type { LibraryApi } from '../hooks/useLibrary'
 import type { InstallApi } from '../hooks/useInstall'
 
@@ -23,20 +24,19 @@ interface Props {
   settings: Settings
   onSettings: (patch: Partial<Settings>) => void
   install: InstallApi
+  enrich: EnrichApi
 }
 
-export function SettingsView({ library, settings, onSettings, install }: Props) {
+export function SettingsView({ library, settings, onSettings, install, enrich }: Props) {
   const [strategy, setStrategy] = useState<Strategy>('merge')
   const [showKey, setShowKey] = useState(false)
-  const [busy, setBusy] = useState<null | 'csv' | 'rss' | 'enrich'>(null)
+  const [busy, setBusy] = useState<null | 'csv' | 'rss'>(null)
   const [step, setStep] = useState('')
-  const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<(MergeResult & { origin: string }) | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [over, setOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const pendingEnrich = library.books.filter((b) => !b.ref)
   const provider = PROVIDERS.find((p) => p.id === settings.provider)!
   const needsKey = provider.needsKey && !settings.googleApiKey.trim()
 
@@ -81,40 +81,6 @@ export function SettingsView({ library, settings, onSettings, install }: Props) 
       setBusy(null)
       setStep('')
     }
-  }
-
-  /** Resuelve portada y ficha de los libros importados, uno a uno para no saturar la API. */
-  const handleEnrich = async () => {
-    setBusy('enrich')
-    setError(null)
-    setProgress(0)
-    let done = 0
-    let matched = 0
-    for (const book of pendingEnrich) {
-      try {
-        const found = await findBookFor(book, {
-          provider: settings.provider,
-          apiKey: settings.googleApiKey,
-        })
-        if (found) {
-          library.update(book.id, {
-            ref: found.ref,
-            thumbnail: book.thumbnail ?? found.thumbnail,
-            pageCount: book.pageCount ?? found.pageCount,
-            isbn: book.isbn ?? found.isbn,
-            year: book.year ?? found.year,
-          })
-          matched++
-        }
-      } catch {
-        // Un fallo puntual no debe interrumpir el lote completo.
-      }
-      done++
-      setProgress(Math.round((done / pendingEnrich.length) * 100))
-      await new Promise((r) => setTimeout(r, 220))
-    }
-    setBusy(null)
-    setStep(`${matched} de ${pendingEnrich.length} libros enlazados con ${provider.label}.`)
   }
 
   return (
@@ -454,20 +420,33 @@ export function SettingsView({ library, settings, onSettings, install }: Props) 
             <div>
               <p className="label">Completar fichas</p>
               <p className="hint" style={{ margin: '0 0 10px' }}>
-                {pendingEnrich.length
-                  ? `${plural(pendingEnrich.length, 'libro importado aún no tiene', 'libros importados aún no tienen')} portada ni ficha.`
-                  : `Todos tus libros están enlazados con ${provider.label}.`}
+                {enrich.status === 'done'
+                  ? `${enrich.cancelled ? 'Cancelado: ' : ''}${enrich.matched} de ${enrich.done} ${enrich.done === 1 ? 'libro enlazado' : 'libros enlazados'} con ${enrich.providerLabel}.`
+                  : enrich.pendingCount
+                    ? `${plural(enrich.pendingCount, 'libro importado aún no tiene', 'libros importados aún no tienen')} portada ni ficha.`
+                    : `Todos tus libros están enlazados con ${provider.label}.`}
               </p>
-              <button
-                className="btn btn--block"
-                onClick={handleEnrich}
-                disabled={busy !== null || pendingEnrich.length === 0 || needsKey}
-              >
-                {busy === 'enrich' ? `Buscando portadas… ${progress}%` : 'Buscar portadas y fichas'}
-              </button>
-              {busy === 'enrich' && (
+              {enrich.status === 'running' ? (
+                <div className="row" style={{ marginTop: 0 }}>
+                  <button className="btn btn--block" disabled>
+                    Buscando portadas… {enrich.progress}%
+                  </button>
+                  <button className="btn btn--ghost" onClick={enrich.cancel}>
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="btn btn--block"
+                  onClick={enrich.start}
+                  disabled={busy !== null || !enrich.canStart}
+                >
+                  Buscar portadas y fichas
+                </button>
+              )}
+              {enrich.status === 'running' && (
                 <div className="progress">
-                  <div className="progress__bar" style={{ width: `${progress}%` }} />
+                  <div className="progress__bar" style={{ width: `${enrich.progress}%` }} />
                 </div>
               )}
               {busy === null && step && !error && <p className="hint">{step}</p>}
