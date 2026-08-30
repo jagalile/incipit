@@ -340,8 +340,9 @@ export function SettingsView({ library, settings, onSettings, install, enrich }:
                 <a href="https://www.goodreads.com" target="_blank" rel="noreferrer">
                   goodreads.com
                 </a>{' '}
-                y entra en tu perfil (el icono de arriba a la derecha) -este enlace se abre en el
-                navegador, no dentro de la app instalada, para que puedas ver la dirección completa-.
+                y entra en tu perfil (el icono de arriba a la derecha). Si con la app instalada el
+                enlace te devuelve aquí en vez de abrir el navegador, mantén el dedo pulsado sobre
+                él y elige «Abrir en Safari» (o «Abrir en el navegador») en el menú que aparece.
               </p>
               <p className="hint">
                 Está en la URL de tu perfil: goodreads.com/user/show/<strong>12345678</strong>-nombre
