@@ -10,7 +10,7 @@ import {
   type MergeResult,
 } from '../lib/goodreads'
 import { PROVIDERS } from '../lib/catalog'
-import { exportLibrary } from '../lib/storage'
+import { DEFAULT_SETTINGS, exportLibrary } from '../lib/storage'
 import { plural } from '../lib/plural'
 import type { Settings } from '../types'
 import type { EnrichApi } from '../hooks/useEnrichment'
@@ -174,6 +174,7 @@ export function SettingsView({ library, settings, onSettings, install, enrich }:
                 onClick={() => onSettings({ provider: p.id })}
               >
                 {p.label}
+                {p.id === DEFAULT_SETTINGS.provider && <span className="chip__count">Por defecto</span>}
               </button>
             ))}
           </div>
