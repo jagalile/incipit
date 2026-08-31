@@ -179,6 +179,14 @@ export default function App() {
               rel="noreferrer"
             >
               {PROVIDERS.find((p) => p.id === settings.provider)?.label}
+            </a>{' '}
+            ·{' '}
+            <a href="https://github.com/jagalile/incipit" target="_blank" rel="noreferrer">
+              GitHub
+            </a>{' '}
+            ·{' '}
+            <a href="https://github.com/jagalile/incipit/issues/new" target="_blank" rel="noreferrer">
+              Sugerencias y errores
             </a>
           </span>
           <span>{plural(library.books.length, 'libro', 'libros')} en la estantería</span>
