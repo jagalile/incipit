@@ -89,3 +89,46 @@ export function exportLibrary(books: StoredBook[]): void {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+export class BackupError extends Error {}
+
+/** Lee un archivo exportado con «Exportar JSON» (o uno viejo, con el mismo
+ *  paso de migración que al cargar desde localStorage). */
+export function parseBackup(text: string): StoredBook[] {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new BackupError('El archivo no es un JSON válido.')
+  }
+  if (!Array.isArray(parsed)) {
+    throw new BackupError('El archivo no tiene el formato esperado: debería ser una lista de libros.')
+  }
+  const books = parsed
+    .filter((b): b is StoredBook => Boolean(b && b.id && b.title && b.status))
+    .map(migrate)
+  if (!books.length) throw new BackupError('El archivo no contiene ningún libro reconocible.')
+  return books
+}
+
+export interface BackupMergeResult {
+  books: StoredBook[]
+  added: number
+  updated: number
+}
+
+/** Los libros importados sustituyen a los que ya tuvieras con el mismo id
+ *  -es una copia de seguridad propia, no una fuente externa que pueda ir
+ *  por detrás de lo que tienes-, pero nunca borra libros locales que no
+ *  estén en el archivo. */
+export function mergeBackup(current: StoredBook[], imported: StoredBook[]): BackupMergeResult {
+  const byId = new Map(current.map((b) => [b.id, b]))
+  let added = 0
+  let updated = 0
+  for (const book of imported) {
+    if (byId.has(book.id)) updated++
+    else added++
+    byId.set(book.id, book)
+  }
+  return { books: [...byId.values()], added, updated }
+}

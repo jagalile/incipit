@@ -10,7 +10,7 @@ import {
   type MergeResult,
 } from '../lib/goodreads'
 import { PROVIDERS } from '../lib/catalog'
-import { DEFAULT_SETTINGS, exportLibrary } from '../lib/storage'
+import { BackupError, DEFAULT_SETTINGS, exportLibrary, mergeBackup, parseBackup } from '../lib/storage'
 import { plural } from '../lib/plural'
 import type { Settings } from '../types'
 import type { EnrichApi } from '../hooks/useEnrichment'
@@ -30,12 +30,13 @@ interface Props {
 export function SettingsView({ library, settings, onSettings, install, enrich }: Props) {
   const [strategy, setStrategy] = useState<Strategy>('merge')
   const [showKey, setShowKey] = useState(false)
-  const [busy, setBusy] = useState<null | 'csv' | 'rss'>(null)
+  const [busy, setBusy] = useState<null | 'csv' | 'rss' | 'backup'>(null)
   const [step, setStep] = useState('')
   const [result, setResult] = useState<(MergeResult & { origin: string }) | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [over, setOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const backupFileRef = useRef<HTMLInputElement>(null)
 
   const provider = PROVIDERS.find((p) => p.id === settings.provider)!
   const needsKey = provider.needsKey && !settings.googleApiKey.trim()
@@ -60,6 +61,30 @@ export function SettingsView({ library, settings, onSettings, install, enrich }:
         err instanceof ImportError
           ? err.message
           : 'No se pudo leer el archivo. Asegúrate de que es el CSV que exporta Goodreads.',
+      )
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  /** Restaura una copia de seguridad exportada con «Exportar JSON» -o una
+   *  vieja, con la misma migración que al cargar desde localStorage-. */
+  const handleBackupFile = async (file: File) => {
+    setBusy('backup')
+    setError(null)
+    setResult(null)
+    try {
+      if (file.size > 20 * 1024 * 1024) throw new BackupError('El archivo supera los 20 MB.')
+      const text = await file.text()
+      const imported = parseBackup(text)
+      const merged = mergeBackup(library.books, imported)
+      library.replaceAll(merged.books)
+      setResult({ ...merged, skipped: 0, origin: file.name })
+    } catch (err) {
+      setError(
+        err instanceof BackupError
+          ? err.message
+          : 'No se pudo leer el archivo. Asegúrate de que es una copia de seguridad exportada desde Incipit.',
       )
     } finally {
       setBusy(null)
@@ -473,6 +498,24 @@ export function SettingsView({ library, settings, onSettings, install, enrich }:
                   Exportar JSON
                 </button>
                 <button
+                  className="btn"
+                  onClick={() => backupFileRef.current?.click()}
+                  disabled={busy !== null}
+                >
+                  {busy === 'backup' ? 'Importando…' : 'Importar JSON'}
+                </button>
+                <input
+                  ref={backupFileRef}
+                  type="file"
+                  accept=".json,application/json"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleBackupFile(file)
+                    e.target.value = ''
+                  }}
+                />
+                <button
                   className="btn btn--danger"
                   disabled={!library.books.length}
                   onClick={() => {
@@ -485,6 +528,10 @@ export function SettingsView({ library, settings, onSettings, install, enrich }:
                   Vaciar biblioteca
                 </button>
               </div>
+              <p className="hint" style={{ marginTop: 10 }}>
+                Importar añade o actualiza los libros del archivo -por id-, sin borrar los que ya
+                tengas y no estén en él.
+              </p>
             </div>
           </div>
         </div>
