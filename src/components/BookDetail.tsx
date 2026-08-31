@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { CatalogError, findBookFor, getBook, refKey, type BookRef, type Provider } from '../lib/catalog'
+import {
+  CatalogError,
+  PROVIDERS,
+  findBookFor,
+  getBook,
+  refKey,
+  type BookRef,
+  type Provider,
+} from '../lib/catalog'
 import { stripHtml } from '../lib/text'
 import type { BookResult, BookStatus, SearchField, StoredBook } from '../types'
 import type { LibraryApi } from '../hooks/useLibrary'
@@ -64,6 +72,8 @@ export function BookDetail({ seed, stored, library, provider, apiKey, onSearch, 
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [brokenCover, setBrokenCover] = useState(false)
+  const [migrating, setMigrating] = useState(false)
+  const [migrateError, setMigrateError] = useState<string | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -113,6 +123,40 @@ export function BookDetail({ seed, stored, library, provider, apiKey, onSearch, 
     }
   }, [onClose])
 
+  /** Busca este libro en el otro catálogo y, si lo encuentra, lo reenlaza -sin
+   *  borrarlo y volverlo a añadir-. Solo tiene sentido para un libro que ya
+   *  está en la biblioteca y ya tiene una ficha cargada. */
+  const handleMigrate = async () => {
+    if (!stored || !detail) return
+    const target: Provider = detail.ref.provider === 'google' ? 'openlibrary' : 'google'
+    setMigrating(true)
+    setMigrateError(null)
+    try {
+      const found = await findBookFor(
+        { title: stored.title, authors: stored.authors, isbn: stored.isbn },
+        { provider: target, apiKey },
+      )
+      if (!found) {
+        setMigrateError(
+          `No se encontró en ${PROVIDERS.find((p) => p.id === target)!.label}. Sigue enlazado como estaba.`,
+        )
+        return
+      }
+      library.update(stored.id, {
+        ref: found.ref,
+        thumbnail: found.thumbnail,
+        pageCount: found.pageCount,
+        isbn: found.isbn,
+        year: found.year,
+      })
+      setDetail(found)
+    } catch {
+      setMigrateError('No se pudo completar la búsqueda. Sigue enlazado como estaba.')
+    } finally {
+      setMigrating(false)
+    }
+  }
+
   // La ficha del catálogo completa (sinopsis, categorías, portada grande), pero el
   // título y el autor que ya conocemos mandan: Open Library devuelve el título
   // canónico de la obra, casi siempre en inglés, y no es el que el lector eligió.
@@ -123,6 +167,11 @@ export function BookDetail({ seed, stored, library, provider, apiKey, onSearch, 
   const cover = stored?.thumbnail ?? detail?.thumbnail ?? seed.thumbnail
   const status = stored?.status
   const paragraphs = toParagraphs(detail?.description)
+
+  // El otro catálogo, para el botón de reenlazar -solo tiene sentido si el
+  // libro ya está en la biblioteca y ya se cargó su ficha actual-.
+  const migrateTarget = stored && detail ? PROVIDERS.find((p) => p.id !== detail.ref.provider)! : null
+  const migrateNeedsKey = migrateTarget?.needsKey && !apiKey?.trim()
 
   const handleStatus = (next: BookStatus) => {
     if (stored) {
@@ -327,7 +376,23 @@ export function BookDetail({ seed, stored, library, provider, apiKey, onSearch, 
               <a className="btn btn--sm" href={detail.link} target="_blank" rel="noreferrer">
                 {detail.ref.provider === 'google' ? 'Ver en Google Books ↗' : 'Ver en Open Library ↗'}
               </a>
+              {migrateTarget && (
+                <button
+                  type="button"
+                  className="btn btn--sm btn--ghost"
+                  onClick={handleMigrate}
+                  disabled={migrating || migrateNeedsKey}
+                  title={migrateNeedsKey ? 'Añade tu clave de Google Books en Ajustes' : undefined}
+                >
+                  {migrating ? 'Buscando…' : `Migrar a ${migrateTarget.label}`}
+                </button>
+              )}
             </div>
+          )}
+          {migrateError && (
+            <p className="hint" style={{ color: 'var(--danger)' }}>
+              {migrateError}
+            </p>
           )}
         </div>
       </div>

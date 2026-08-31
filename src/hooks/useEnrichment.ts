@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { PROVIDERS, findBookFor } from '../lib/catalog'
+import { PROVIDERS, findBookFor, type Provider } from '../lib/catalog'
 import type { Settings, StoredBook } from '../types'
 import type { LibraryApi } from './useLibrary'
 
@@ -12,12 +12,32 @@ export interface EnrichState {
   total: number
   matched: number
   cancelled: boolean
+  /** Qué se está haciendo, para la franja flotante y el texto del botón:
+   *  "Buscando portadas y fichas" no vale para una migración entre
+   *  catálogos, son acciones distintas aunque compartan todo lo demás. */
+  label: string
+}
+
+export interface StartOptions {
+  /** Qué libros procesar. Por defecto, los que aún no tienen `ref`. */
+  books?: StoredBook[]
+  /** A qué proveedor buscar. Por defecto, el configurado en Ajustes. */
+  provider?: Provider
+  /** 'fill' (por defecto) solo rellena lo que faltaba -para no pisar una
+   *  portada que ya trajo el RSS de Goodreads, por ejemplo-. 'replace'
+   *  sustituye siempre por lo que traiga el proveedor nuevo: es el modo
+   *  correcto para migrar un libro ya enlazado de un catálogo a otro, donde
+   *  el punto es justo dejar de usar los datos del proveedor anterior. */
+  mode?: 'fill' | 'replace'
+  /** Qué mostrar mientras corre. Por defecto, "Buscando portadas y fichas". */
+  label?: string
 }
 
 export interface EnrichApi extends EnrichState {
   pendingCount: number
   canStart: boolean
-  start: () => void
+  needsKey: boolean
+  start: (opts?: StartOptions) => void
   cancel: () => void
   dismiss: () => void
 }
@@ -29,6 +49,7 @@ const IDLE: EnrichState = {
   total: 0,
   matched: 0,
   cancelled: false,
+  label: 'Buscando portadas y fichas',
 }
 
 /**
@@ -118,59 +139,79 @@ export function useEnrichment(library: LibraryApi, settings: Settings): EnrichAp
     setState(IDLE)
   }, [])
 
-  const start = useCallback(() => {
-    const { library, settings, pending, needsKey } = latestRef.current
-    if (runningRef.current || pending.length === 0 || needsKey) return
-    runningRef.current = true
-    clearTimeout(dismissTimerRef.current)
-    cancelledRef.current = false
-    const controller = new AbortController()
-    controllerRef.current = controller
-    const batch: StoredBook[] = pending
-    const total = batch.length
-    setState({ status: 'running', progress: 0, done: 0, total, matched: 0, cancelled: false })
+  const start = useCallback(
+    (opts?: StartOptions) => {
+      const { library, settings, pending } = latestRef.current
+      const targetProvider = opts?.provider ?? settings.provider
+      const batch = opts?.books ?? pending
+      const mode = opts?.mode ?? 'fill'
+      const label = opts?.label ?? 'Buscando portadas y fichas'
+      // El proveedor OBJETIVO puede no ser el configurado en Ajustes -una
+      // migración apunta a uno concreto, no siempre al seleccionado-, así
+      // que la clave hace falta o no según a quién se busque, no según
+      // `settings.provider`.
+      const targetNeedsKey =
+        PROVIDERS.find((p) => p.id === targetProvider)!.needsKey && !settings.googleApiKey.trim()
+      if (runningRef.current || batch.length === 0 || targetNeedsKey) return
+      runningRef.current = true
+      clearTimeout(dismissTimerRef.current)
+      cancelledRef.current = false
+      const controller = new AbortController()
+      controllerRef.current = controller
+      const total = batch.length
+      setState({ status: 'running', progress: 0, done: 0, total, matched: 0, cancelled: false, label })
 
-    ;(async () => {
-      let done = 0
-      let matched = 0
-      for (const book of batch) {
-        if (cancelledRef.current) break
-        try {
-          const found = await findBookFor(book, {
-            provider: settings.provider,
-            apiKey: settings.googleApiKey,
-            signal: controller.signal,
-          })
-          if (found) {
-            library.update(book.id, {
-              ref: found.ref,
-              thumbnail: book.thumbnail ?? found.thumbnail,
-              pageCount: book.pageCount ?? found.pageCount,
-              isbn: book.isbn ?? found.isbn,
-              year: book.year ?? found.year,
+      ;(async () => {
+        let done = 0
+        let matched = 0
+        for (const book of batch) {
+          if (cancelledRef.current) break
+          try {
+            const found = await findBookFor(book, {
+              provider: targetProvider,
+              apiKey: settings.googleApiKey,
+              signal: controller.signal,
             })
-            matched++
+            if (found) {
+              library.update(book.id, {
+                ref: found.ref,
+                thumbnail: mode === 'replace' ? found.thumbnail : (book.thumbnail ?? found.thumbnail),
+                pageCount: mode === 'replace' ? found.pageCount : (book.pageCount ?? found.pageCount),
+                isbn: mode === 'replace' ? found.isbn : (book.isbn ?? found.isbn),
+                year: mode === 'replace' ? found.year : (book.year ?? found.year),
+              })
+              matched++
+            }
+          } catch (err) {
+            if ((err as Error)?.name === 'AbortError') break
+            // Un fallo puntual no debe interrumpir el lote completo.
           }
-        } catch (err) {
-          if ((err as Error)?.name === 'AbortError') break
-          // Un fallo puntual no debe interrumpir el lote completo.
+          done++
+          setState((s) => ({ ...s, done, matched, progress: Math.round((done / total) * 100) }))
+          if (cancelledRef.current) break
+          await new Promise((r) => setTimeout(r, 220))
         }
-        done++
-        setState((s) => ({ ...s, done, matched, progress: Math.round((done / total) * 100) }))
-        if (cancelledRef.current) break
-        await new Promise((r) => setTimeout(r, 220))
-      }
-      runningRef.current = false
-      setState((s) => ({ ...s, status: 'done', cancelled: cancelledRef.current, matched, done }))
-      // Toast no intrusivo: se retira solo pasado un rato si nadie lo cierra antes.
-      dismissTimerRef.current = setTimeout(dismiss, 8000)
-    })()
-  }, [dismiss])
+        runningRef.current = false
+        setState((s) => ({ ...s, status: 'done', cancelled: cancelledRef.current, matched, done }))
+        // Toast no intrusivo: se retira solo pasado un rato si nadie lo cierra antes.
+        dismissTimerRef.current = setTimeout(dismiss, 8000)
+      })()
+    },
+    [dismiss],
+  )
 
   const cancel = useCallback(() => {
     cancelledRef.current = true
     controllerRef.current?.abort()
   }, [])
 
-  return { ...state, pendingCount: pending.length, canStart: pending.length > 0 && !needsKey, start, cancel, dismiss }
+  return {
+    ...state,
+    pendingCount: pending.length,
+    canStart: pending.length > 0 && !needsKey,
+    needsKey,
+    start,
+    cancel,
+    dismiss,
+  }
 }

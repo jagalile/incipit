@@ -13,7 +13,9 @@ export function EnrichStatus({ enrich }: { enrich: EnrichApi }) {
         {enrich.status === 'running' ? (
           <>
             <div className="enrich-status__row">
-              <span className="enrich-status__text">Buscando portadas y fichas… {enrich.progress}%</span>
+              <span className="enrich-status__text">
+                {enrich.label}… {enrich.progress}%
+              </span>
               <button type="button" className="btn btn--ghost btn--sm" onClick={enrich.cancel}>
                 Cancelar
               </button>

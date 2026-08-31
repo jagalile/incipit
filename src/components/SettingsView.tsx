@@ -40,6 +40,9 @@ export function SettingsView({ library, settings, onSettings, install, enrich }:
 
   const provider = PROVIDERS.find((p) => p.id === settings.provider)!
   const needsKey = provider.needsKey && !settings.googleApiKey.trim()
+  // Solo hay dos proveedores: el que no sea el seleccionado es siempre "el otro".
+  const otherProvider = PROVIDERS.find((p) => p.id !== settings.provider)!
+  const migratable = library.books.filter((b) => b.ref && b.ref.provider === otherProvider.id)
 
   const apply = (entries: GoodreadsEntry[], origin: string) => {
     const merged = mergeEntries(library.books, entries, strategy)
@@ -283,6 +286,31 @@ export function SettingsView({ library, settings, onSettings, install, enrich }:
               )}
             </>
           )}
+
+          {migratable.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <p className="hint" style={{ marginBottom: 10 }}>
+                {plural(migratable.length, 'libro enlazado', 'libros enlazados')} con{' '}
+                {otherProvider.label} -se pueden mover a {provider.label} sin borrar y volver a
+                añadir cada uno.
+              </p>
+              <button
+                type="button"
+                className="btn btn--block"
+                onClick={() =>
+                  enrich.start({
+                    books: migratable,
+                    provider: settings.provider,
+                    mode: 'replace',
+                    label: `Migrando a ${provider.label}`,
+                  })
+                }
+                disabled={enrich.status === 'running' || enrich.needsKey}
+              >
+                Migrar a {provider.label}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="panel">
@@ -464,7 +492,7 @@ export function SettingsView({ library, settings, onSettings, install, enrich }:
               {enrich.status === 'running' ? (
                 <div className="row" style={{ marginTop: 0 }}>
                   <button className="btn btn--block" disabled>
-                    Buscando portadas… {enrich.progress}%
+                    {enrich.label}… {enrich.progress}%
                   </button>
                   <button className="btn btn--ghost" onClick={enrich.cancel}>
                     Cancelar
@@ -473,7 +501,7 @@ export function SettingsView({ library, settings, onSettings, install, enrich }:
               ) : (
                 <button
                   className="btn btn--block"
-                  onClick={enrich.start}
+                  onClick={() => enrich.start()}
                   disabled={busy !== null || !enrich.canStart}
                 >
                   Buscar portadas y fichas
